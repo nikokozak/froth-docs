@@ -33,8 +33,8 @@ Verification:
 ```froth
 froth> 1 1 + .
 2
-froth> 1 LED_BUILTIN gpio.mode
-froth> 1 LED_BUILTIN gpio.write
+froth> LED_BUILTIN 1 gpio.mode
+froth> LED_BUILTIN 1 gpio.write
 ```
 
 LED should light up. If the REPL isn't working, troubleshoot the connection first.
@@ -222,8 +222,8 @@ Add a visual alert: if the sensor reading exceeds 2000mv (roughly 60% of full ra
 ```froth
 froth> : check-threshold ( mv -- mv )
 ...     dup 2000 >
-...     [ 1 LED_BUILTIN gpio.write ]
-...     [ 0 LED_BUILTIN gpio.write ]
+...     [ LED_BUILTIN 1 gpio.write ]
+...     [ LED_BUILTIN 0 gpio.write ]
 ...     if ;
 ```
 
@@ -232,7 +232,7 @@ froth> : check-threshold ( mv -- mv )
 Set up the LED and run:
 
 ```froth
-froth> 1 LED_BUILTIN gpio.mode
+froth> LED_BUILTIN 1 gpio.mode
 
 froth> : sensor-loop-with-alert ( -- )
 ...     [ true ] [
@@ -258,8 +258,8 @@ froth> 2000 'alert-threshold def
 
 froth> : check-threshold ( mv -- mv )
 ...     dup alert-threshold >
-...     [ 1 LED_BUILTIN gpio.write ]
-...     [ 0 LED_BUILTIN gpio.write ]
+...     [ LED_BUILTIN 1 gpio.write ]
+...     [ LED_BUILTIN 0 gpio.write ]
 ...     if ;
 ```
 
@@ -278,7 +278,7 @@ If you want the sensor loop to start at boot, define `autorun`:
 
 ```froth
 froth> : autorun ( -- )
-...     1 LED_BUILTIN gpio.mode
+...     LED_BUILTIN 1 gpio.mode
 ...     sensor-loop-with-alert ;
 froth> save
 ```
@@ -298,7 +298,7 @@ Power-cycle the board. The sensor loop starts immediately.
 
 \ Hardware
 : setup ( -- )
-  1 LED_BUILTIN gpio.mode ;
+  LED_BUILTIN 1 gpio.mode ;
 
 \ Reading
 : read-sensor ( -- count )
@@ -315,8 +315,8 @@ Power-cycle the board. The sensor loop starts immediately.
 \ Alert
 : check-threshold ( mv -- mv )
   dup alert-threshold >
-  [ 1 LED_BUILTIN gpio.write ]
-  [ 0 LED_BUILTIN gpio.write ]
+  [ LED_BUILTIN 1 gpio.write ]
+  [ LED_BUILTIN 0 gpio.write ]
   if ;
 
 \ Main loop

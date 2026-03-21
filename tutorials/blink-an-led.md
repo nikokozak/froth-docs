@@ -77,10 +77,10 @@ If you don't see `2`, the REPL isn't working. Check the connection before contin
 GPIO pins must be configured before use. Set GPIO 2 (`LED_BUILTIN`) as an output:
 
 ```froth
-froth> 1 LED_BUILTIN gpio.mode
+froth> LED_BUILTIN 1 gpio.mode
 ```
 
-`gpio.mode ( mode pin -- )` — mode `1` means output, mode `0` means input. Stack effect: consumes both values, leaves nothing. If the REPL returns to the prompt without an error, the pin is configured.
+`gpio.mode ( pin mode -- )` — mode `1` means output, mode `0` means input. Stack effect: consumes both values, leaves nothing. If the REPL returns to the prompt without an error, the pin is configured.
 
 You only need to do this once per session. (After a power cycle, the board needs reconfiguring — more on that when we get to `autorun`.)
 
@@ -90,22 +90,22 @@ You only need to do this once per session. (After a power cycle, the board needs
 
 Drive the pin high:
 ```froth
-froth> 1 LED_BUILTIN gpio.write
+froth> LED_BUILTIN 1 gpio.write
 ```
 
 The LED should light up. Drive it low:
 ```froth
-froth> 0 LED_BUILTIN gpio.write
+froth> LED_BUILTIN 0 gpio.write
 ```
 
 The LED should go off.
 
-`gpio.write ( level pin -- )` — `level` is `1` for high (3.3V), `0` for low (GND). This is the fundamental LED control: high = on, low = off for active-high LEDs.
+`gpio.write ( pin level -- )` — `level` is `1` for high (3.3V), `0` for low (GND). This is the fundamental LED control: high = on, low = off for active-high LEDs.
 
 If the LED doesn't light up:
 - Confirm `gpio.mode` ran successfully (step 2)
 - Some ESP32 boards have the LED on a different pin — check your board's documentation
-- A few boards use active-low LEDs (low = on). Try `0 LED_BUILTIN gpio.write` and see if that lights it
+- A few boards use active-low LEDs (low = on). Try `LED_BUILTIN 0 gpio.write` and see if that lights it
 
 ---
 
@@ -114,7 +114,7 @@ If the LED doesn't light up:
 Toggle with a delay:
 
 ```froth
-froth> 1 LED_BUILTIN gpio.write  500 ms  0 LED_BUILTIN gpio.write  500 ms
+froth> LED_BUILTIN 1 gpio.write  500 ms  LED_BUILTIN 0 gpio.write  500 ms
 ```
 
 This does: LED on, wait 500ms, LED off, wait 500ms. You should see a single blink.
@@ -129,8 +129,8 @@ Run the line a few times. Each time, the LED blinks once. Now we'll wrap this in
 
 ```froth
 froth> : blink ( delay -- )
-...     1 LED_BUILTIN gpio.write  dup ms
-...     0 LED_BUILTIN gpio.write  ms ;
+...     LED_BUILTIN 1 gpio.write  dup ms
+...     LED_BUILTIN 0 gpio.write  ms ;
 ```
 
 The word takes one argument — the delay in milliseconds — and uses it for both the on-phase and the off-phase.
@@ -139,7 +139,7 @@ The word takes one argument — the delay in milliseconds — and uses it for bo
 
 Test it:
 ```froth
-froth> 1 LED_BUILTIN gpio.mode
+froth> LED_BUILTIN 1 gpio.mode
 froth> 500 blink
 froth> 100 blink
 froth> 50 blink
@@ -257,7 +257,7 @@ To make the LED start blinking automatically at boot, define `autorun`:
 
 ```froth
 froth> : autorun ( -- )
-...     1 LED_BUILTIN gpio.mode
+...     LED_BUILTIN 1 gpio.mode
 ...     [ true ] [ 500 blink ] while ;
 froth> save
 ```
@@ -278,12 +278,11 @@ If you have additional LEDs wired to other pins (say GPIO 4 and GPIO 5), define 
 
 ```froth
 froth> : blink-pin ( delay pin -- )
-...     swap
-...     1 over gpio.write  over ms
-...     0 over gpio.write  swap ms
+...     over 1 gpio.write  over ms
+...     over 0 gpio.write  swap ms
 ...     drop ;
-froth> 1 2 gpio.mode
-froth> 1 4 gpio.mode
+froth> 2 1 gpio.mode
+froth> 4 1 gpio.mode
 froth> 500 2 blink-pin
 froth> 500 4 blink-pin
 ```
@@ -317,8 +316,8 @@ froth> : toggle-speed ( -- )
 ...     'current-delay def ;
 
 froth> : button-blink ( -- )
-...     0 BOOT_BUTTON gpio.mode
-...     1 LED_BUILTIN gpio.mode
+...     BOOT_BUTTON 0 gpio.mode
+...     LED_BUILTIN 1 gpio.mode
 ...     [ true ] [
 ...       BOOT_BUTTON gpio.read 0 = [ toggle-speed ] when
 ...       current-delay blink
@@ -331,8 +330,8 @@ When the BOOT button is pressed (GPIO 0 reads `0`), `toggle-speed` runs and swit
 
 ## What you learned
 
-- **`gpio.mode ( mode pin -- )`** configures a pin as input (0) or output (1). Must be called before using the pin.
-- **`gpio.write ( level pin -- )`** drives a pin high (1) or low (0). `1 LED_BUILTIN gpio.write` turns on the built-in LED.
+- **`gpio.mode ( pin mode -- )`** configures a pin as input (0) or output (1). Must be called before using the pin.
+- **`gpio.write ( pin level -- )`** drives a pin high (1) or low (0). `LED_BUILTIN 1 gpio.write` turns on the built-in LED.
 - **`gpio.read ( pin -- level )`** reads a pin's current level — useful for buttons.
 - **`ms ( n -- )`** blocks for n milliseconds. Combine with gpio words for timing.
 - **`dup`** in a blink word: when you need the same value in two places, `dup` it before the first use.

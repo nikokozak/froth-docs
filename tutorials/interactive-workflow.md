@@ -95,7 +95,7 @@ Example — you want to read a sensor, calibrate the value, and light an LED if 
 \ Don't do this first
 : sensor-alert ( -- )
   34 adc.read 3300 * 4095 /mod nip
-  2000 > [ 1 2 gpio.write ] [ 0 2 gpio.write ] if ;
+  2000 > [ 2 1 gpio.write ] [ 2 0 gpio.write ] if ;
 ```
 
 Build it this way:
@@ -120,7 +120,7 @@ Build it this way:
 
 \ Layer 4: alert
 : set-alert-led ( flag -- )
-  LED_BUILTIN gpio.write ;
+  LED_BUILTIN swap gpio.write ;
 \ Test: 1 set-alert-led  → LED on
 \       0 set-alert-led  → LED off
 
@@ -219,8 +219,8 @@ If you're not sure what a word does (because you defined it a while ago or becau
 ```froth
 froth> see blink
 : blink ( delay -- )
-  1 LED_BUILTIN gpio.write dup ms
-  0 LED_BUILTIN gpio.write ms ;
+  LED_BUILTIN 1 gpio.write dup ms
+  LED_BUILTIN 0 gpio.write ms ;
 ```
 
 `see` reconstructs the definition in colon-semicolon syntax. The output is the actual stored body — if you redefined the word, `see` shows the current version.
@@ -274,7 +274,7 @@ Not everything belongs at the REPL. Here's the rule of thumb:
 - **Small experiments:** one-off expressions you'll run once
 - **Sending lines from an editor:** the selection-send workflow blurs the line — you write in the editor but execute at the REPL
 - **Testing individual words:** call a word with known inputs, check the output
-- **Interactive hardware control:** `1 LED_BUILTIN gpio.write` is faster at the REPL than in a file
+- **Interactive hardware control:** `LED_BUILTIN 1 gpio.write` is faster at the REPL than in a file
 
 ### Use a `.froth` file for:
 
@@ -313,7 +313,7 @@ Here's a realistic session, annotated with what the developer is doing and why.
 Start at the REPL, no file yet. Understand the button behavior:
 
 ```froth
-froth> 0 BOOT_BUTTON gpio.mode
+froth> BOOT_BUTTON 0 gpio.mode
 froth> BOOT_BUTTON gpio.read .
 1
 ```
@@ -409,7 +409,7 @@ Add to the file:
 
 ```froth
 : button-counter ( -- )
-  0 BOOT_BUTTON gpio.mode
+  BOOT_BUTTON 0 gpio.mode
   0 'press-count def
   [ true ] [ wait-for-press on-press ] while ;
 ```

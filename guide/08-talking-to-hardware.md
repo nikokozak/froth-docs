@@ -38,24 +38,24 @@ Tone: this is the most hands-on chapter in the guide. Encourage the reader to ru
 
 **What to cover:**
 
-**`gpio.mode ( mode pin -- )`** — sets the direction of a GPIO pin. `mode` is `0` for input, `1` for output (verify exact values against the board library). `1` for output means the pin can drive high or low. `0` for input means the pin floats and reads back an external voltage.
+**`gpio.mode ( pin mode -- )`** — sets the direction of a GPIO pin. `mode` is `0` for input, `1` for output (verify exact values against the board library). `1` for output means the pin can drive high or low. `0` for input means the pin floats and reads back an external voltage.
 
 Example: configure GPIO 2 as output:
 ```froth
-1 2 gpio.mode
+2 1 gpio.mode
 ```
-Stack effect: 1 (output mode) and 2 (pin number) consumed. Nothing left.
+Stack effect: 2 (pin number) and 1 (output mode) consumed. Nothing left.
 
-**`gpio.write ( level pin -- )`** — sets the output level of a GPIO pin. `level` is `1` for high (3.3V) and `0` for low (GND). Only works on pins configured as output.
+**`gpio.write ( pin level -- )`** — sets the output level of a GPIO pin. `level` is `1` for high (3.3V) and `0` for low (GND). Only works on pins configured as output.
 
 Drive GPIO 2 high:
 ```froth
-1 2 gpio.write
+2 1 gpio.write
 ```
 
 Drive GPIO 2 low:
 ```froth
-0 2 gpio.write
+2 0 gpio.write
 ```
 
 **`gpio.read ( pin -- level )`** — reads the current level of a GPIO pin. Returns `1` if the pin is high, `0` if low. Works on both input and output pins.
@@ -65,7 +65,7 @@ Read GPIO 0:
 0 gpio.read .
 ```
 
-**Writer note:** Stack argument order matters. `gpio.mode` takes `( mode pin -- )` — mode before pin. This is consistent with the board library's general convention: the "what" comes before the "where." Make this explicit so readers don't have to guess.
+**Writer note:** Stack argument order matters. `gpio.mode` takes `( pin mode -- )` — pin before mode. This is consistent with the board library's general convention: the "where" comes before the "what." Make this explicit so readers don't have to guess.
 
 ---
 
@@ -81,26 +81,26 @@ Read GPIO 0:
 
 First, configure the pin:
 ```froth
-1 LED_BUILTIN gpio.mode
+LED_BUILTIN 1 gpio.mode
 ```
 
 Next, turn the LED on and off manually to verify the wiring:
 ```froth
-1 LED_BUILTIN gpio.write
-0 LED_BUILTIN gpio.write
+LED_BUILTIN 1 gpio.write
+LED_BUILTIN 0 gpio.write
 ```
 
 Now add timing. `ms ( n -- )` waits for `n` milliseconds:
 ```froth
-1 LED_BUILTIN gpio.write  500 ms  0 LED_BUILTIN gpio.write  500 ms
+LED_BUILTIN 1 gpio.write  500 ms  LED_BUILTIN 0 gpio.write  500 ms
 ```
 LED on for 500ms, off for 500ms.
 
 Wrap it in a word:
 ```froth
 : blink ( delay -- )
-  1 LED_BUILTIN gpio.write  dup ms
-  0 LED_BUILTIN gpio.write  ms ;
+  LED_BUILTIN 1 gpio.write  dup ms
+  LED_BUILTIN 0 gpio.write  ms ;
 ```
 `dup` copies the delay so it's used for both the on-phase and off-phase. Usage: `500 blink` blinks once with a 500ms period.
 
@@ -134,7 +134,7 @@ Run it at the REPL and watch the LED.
 
 **Code example — microsecond pulse:**
 ```froth
-1 LED_BUILTIN gpio.write  10 us  0 LED_BUILTIN gpio.write
+LED_BUILTIN 1 gpio.write  10 us  LED_BUILTIN 0 gpio.write
 ```
 Sends a 10-microsecond high pulse on the LED pin.
 
@@ -152,7 +152,7 @@ Sends a 10-microsecond high pulse on the LED pin.
 
 Configure GPIO 0 as input and read it:
 ```froth
-0 BOOT_BUTTON gpio.mode
+BOOT_BUTTON 0 gpio.mode
 BOOT_BUTTON gpio.read .
 ```
 Output with button not pressed: `1 `
@@ -174,7 +174,7 @@ Press Ctrl+C (or the reset button) to exit. (Verify the REPL interrupt mechanism
 
 **Writer note:** The active-low logic will surprise some readers. State it plainly at the start of this section: "pressing the BOOT button drives GPIO 0 low, so `gpio.read` returns `0` when pressed." Don't bury this in the code comments.
 
-Also: `0 BOOT_BUTTON gpio.mode` is redundant if GPIO 0 is an input by default. Check and note whether the `gpio.mode` call is required or just good practice for clarity.
+Also: `BOOT_BUTTON 0 gpio.mode` is redundant if GPIO 0 is an input by default. Check and note whether the `gpio.mode` call is required or just good practice for clarity.
 
 ---
 
@@ -186,7 +186,7 @@ Also: `0 BOOT_BUTTON gpio.mode` is redundant if GPIO 0 is an input by default. C
 - Froth boards are described by a `board.json` file that maps pin names to GPIO numbers. When you load the board library, these mappings become Froth constants.
 - On the ESP32 DevKit v1: `LED_BUILTIN` is GPIO 2, `BOOT_BUTTON` is GPIO 0.
 - Using constants instead of literals has two advantages:
-  1. Readability: `LED_BUILTIN gpio.write` is clearer than `2 gpio.write`.
+  1. Readability: `LED_BUILTIN 1 gpio.write` is clearer than `2 1 gpio.write`.
   2. Portability: if you run the same code on a board with the LED on a different pin, only `board.json` needs to change. Your Froth code stays the same.
 - The board library (`lib/board.froth`) loads automatically when a board is connected. It defines constants and convenience words appropriate for that board.
 - To see what's defined: check the reference section for your board, or type `board.words` at the REPL if available (verify this word exists).
@@ -283,11 +283,11 @@ Connect a passive buzzer to GPIO 5 (or any available pin). Set frequency to gene
 
 ```froth
 : button-led ( -- )
-  1 LED_BUILTIN gpio.mode
-  0 BOOT_BUTTON gpio.mode
+  LED_BUILTIN 1 gpio.mode
+  BOOT_BUTTON 0 gpio.mode
   [ true ] [
     BOOT_BUTTON gpio.read not
-    LED_BUILTIN gpio.write
+    LED_BUILTIN swap gpio.write
     10 ms
   ] while ;
 ```
@@ -336,8 +336,8 @@ Write a program where pressing the BOOT button increases LED brightness in 4 ste
 
 ## Key concepts introduced in this chapter
 
-- `gpio.mode ( mode pin -- )`: configure a pin as input (0) or output (1)
-- `gpio.write ( level pin -- )`: drive a pin high (1) or low (0)
+- `gpio.mode ( pin mode -- )`: configure a pin as input (0) or output (1)
+- `gpio.write ( pin level -- )`: drive a pin high (1) or low (0)
 - `gpio.read ( pin -- level )`: read a pin's current level
 - `ms ( n -- )`: block for n milliseconds
 - `us ( n -- )`: block for n microseconds
@@ -354,9 +354,9 @@ Write a program where pressing the BOOT button increases LED brightness in 4 ste
 
 ## Code examples (full list, for reference when writing)
 
-1. `1 2 gpio.mode` — configure GPIO 2 as output
-2. `1 2 gpio.write` — drive GPIO 2 high
-3. `0 2 gpio.write` — drive GPIO 2 low
+1. `2 1 gpio.mode` — configure GPIO 2 as output
+2. `2 1 gpio.write` — drive GPIO 2 high
+3. `2 0 gpio.write` — drive GPIO 2 low
 4. `0 gpio.read .` — read and print GPIO 0 state
 5. `blink` word definition and usage with `LED_BUILTIN`
 6. `blink-n` word for repeating blinks

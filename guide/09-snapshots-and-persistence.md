@@ -134,7 +134,7 @@ The sequence:
 
 ```froth
 : autorun ( -- )
-  1 LED_BUILTIN gpio.mode
+  LED_BUILTIN 1 gpio.mode
   [ 500 blink ] [ ] while ;
 ```
 
@@ -152,11 +152,11 @@ Unplug. Replug. The LED starts blinking immediately at boot, without any serial 
 **Code example — autorun with sensor loop:**
 ```froth
 : autorun ( -- )
-  1 LED_BUILTIN gpio.mode
-  0 BOOT_BUTTON gpio.mode
+  LED_BUILTIN 1 gpio.mode
+  BOOT_BUTTON 0 gpio.mode
   [ true ] [
     BOOT_BUTTON gpio.read not
-    LED_BUILTIN gpio.write
+    LED_BUILTIN swap gpio.write
     10 ms
   ] while ;
 ```
@@ -213,11 +213,11 @@ On boot: runs the button-controlled LED program from chapter 08 indefinitely.
 **Concrete example workflow:**
 ```
 Step 1:
-froth> : blink ( delay -- ) 1 LED_BUILTIN gpio.write dup ms 0 LED_BUILTIN gpio.write ms ;
+froth> : blink ( delay -- ) LED_BUILTIN 1 gpio.write dup ms LED_BUILTIN 0 gpio.write ms ;
 froth> 500 blink  \ test it — LED blinks once
 
 Step 2:
-froth> : autorun ( -- ) 1 LED_BUILTIN gpio.mode [ 500 blink ] [ ] while ;
+froth> : autorun ( -- ) LED_BUILTIN 1 gpio.mode [ 500 blink ] [ ] while ;
 froth> autorun  \ test it — LED starts blinking; reset the board to exit
                \ (or Ctrl+C if the REPL supports interrupts)
 

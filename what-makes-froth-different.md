@@ -130,7 +130,7 @@ A snapshot captures the current heap (word definitions, string literals, heap-al
 The workflow:
 
 ```
-froth> : blink ( delay -- ) 1 LED_BUILTIN gpio.write dup ms 0 LED_BUILTIN gpio.write ms ;
+froth> : blink ( delay -- ) LED_BUILTIN 1 gpio.write dup ms LED_BUILTIN 0 gpio.write ms ;
 froth> 500 blink
 \ LED blinks once
 froth> save
@@ -145,7 +145,7 @@ The `autorun` hook bridges the gap between development session and deployed devi
 
 ```froth
 : autorun ( -- )
-  1 LED_BUILTIN gpio.mode
+  LED_BUILTIN 1 gpio.mode
   [ true ] [ 500 blink ] while ;
 save
 ```
