@@ -12,7 +12,7 @@ Plug in your ESP32, open the Froth REPL, and type this:
 
 The LED on the board lights up. You just wrote a voltage to a physical pin from a REPL prompt. Type `2 0 gpio.write` and the LED turns off. Every hardware interaction in this chapter works the same way: a word, a pin number, a value, an immediate result you can see.
 
-Before going further, verify your setup. You need an ESP32 DevKit connected over USB, VSCode open with the Froth extension, and the REPL active in the terminal panel. Type `1 1 + .` and confirm it prints `2`. If the REPL is not responding, revisit the connection steps in chapter 00.
+Before going further, verify your setup. You need an ESP32 DevKit connected over USB, VSCode open with the Froth extension, and the REPL active in the terminal panel. Type `123 .` and confirm it prints `123`. If the REPL is not responding, revisit the connection steps in chapter 00.
 
 GPIO words require real hardware. If you are using the local POSIX target, the words exist in the vocabulary but have no physical effect.
 
