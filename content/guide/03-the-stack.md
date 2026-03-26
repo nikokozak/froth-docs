@@ -97,7 +97,7 @@ The names inside the parentheses (`a`, `b`, `sum`, `n`) are labels, not syntax. 
 When you define your own words, convention is to write the stack effect as a comment right after the name:
 
 ```froth
-: double ( n -- n ) 2 * ;
+: double ( n -- doubled ) 2 * ;
 ```
 
 This notation appears throughout the Froth standard library and in every chapter from here on. If you can read `( a b -- sum )` and understand that the word eats two values and produces one, you have what you need.
