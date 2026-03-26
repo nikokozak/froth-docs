@@ -667,6 +667,7 @@ main .reference-page {
 }
 
 .ref-entry {
+  position: relative;
   border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 18px 18px 2px;
@@ -681,12 +682,53 @@ main .reference-page {
 }
 
 .ref-entry-signature {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 12px;
+  padding-right: 88px;
   margin-bottom: 12px;
   line-height: 1.45;
 }
 
-.ref-entry-signature code:last-child {
+.ref-entry-signature strong {
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.ref-entry-signature strong code {
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  background: none;
+  padding: 0;
+}
+
+.ref-entry-signature > code:last-child {
   color: var(--color-text-secondary);
+  background: none;
+  padding: 0;
+  font-size: 0.92rem;
+}
+
+.ref-entry-badge {
+  position: absolute;
+  top: -2px;
+  right: 0;
+  margin: 0;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  opacity: 0.78;
+  background: var(--color-bg);
 }
 
 .ref-entry .ref-block-label {
@@ -753,6 +795,13 @@ main .reference-page {
   .ref-entry {
     padding: 14px 14px 0;
     border-radius: 12px;
+  }
+  .ref-entry-signature {
+    padding-right: 72px;
+    gap: 8px 10px;
+  }
+  .ref-entry-signature strong code {
+    font-size: 1.06rem;
   }
   main { padding: 32px 16px 64px; }
   .content h1 { font-size: 1.6rem; }
