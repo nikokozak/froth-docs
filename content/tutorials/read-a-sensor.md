@@ -17,8 +17,8 @@ You've driven outputs and read digital inputs. Analog input is the next step: in
 Verification:
 
 ```froth
-froth> 1 1 + .
-2
+froth> 123 .
+123
 froth> LED_BUILTIN 1 gpio.mode
 froth> LED_BUILTIN 1 gpio.write
 ```
