@@ -55,6 +55,6 @@ Every number you typed went onto the stack. Every word you typed did something w
 
 The stack is covered in depth in the next chapter. Word definitions come after that. For now, the thing to notice is the feedback loop. You typed something, and the response was immediate. There was no file to save, no build to run, no program to restart. The REPL is a conversation with the machine, and it answers on every line.
 
-If the interaction feels unfamiliar, that's normal. Typing `3 4 +` instead of `3 + 4` takes some adjustment. Within a few sessions, it won't feel strange at all.
+If the interaction feels unfamiliar, that's normal. The next chapter introduces arithmetic and shows how to read `3 4 +` one stack step at a time.
 
 [Previous: What is Froth?](01-what-is-froth.md) | [Next: The Stack](03-the-stack.md)
