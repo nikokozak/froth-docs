@@ -20,12 +20,21 @@
       .trim();
   }
 
+  function slugify(value) {
+    return (value || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[`']/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
   function tokenize(query) {
     return normalize(query).split(" ").filter(Boolean);
   }
 
   function fuzzyTitleScore(text, query) {
-    if (!text || !query) return 0;
+    if (!text || !query || query.length < 4) return 0;
 
     var textIndex = 0;
     var queryIndex = 0;
@@ -46,41 +55,341 @@
     return Math.max(12, 52 - (end - start));
   }
 
+  function makeLocation(parts) {
+    return parts.filter(Boolean).join(" / ");
+  }
+
+  function stripMarkdown(value) {
+    return (value || "")
+      .replace(/```[\s\S]*?```/g, function (block) {
+        return block
+          .replace(/^```[^\n]*\n?/, "")
+          .replace(/\n?```$/, "");
+      })
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+      .replace(/^\s*[-*]\s+/gm, "")
+      .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+  }
+
+  function parseWordEntries(document) {
+    if (!document.rawContent || document.permalink !== "/reference/words/") {
+      return [];
+    }
+
+    var lines = document.rawContent.split(/\r?\n/);
+    var entries = [];
+    var section = "";
+    var subsection = "";
+    var i = 0;
+
+    while (i < lines.length) {
+      var line = lines[i].trim();
+
+      if (/^##\s+/.test(line)) {
+        section = line.replace(/^##\s+/, "").trim();
+        subsection = "";
+        i += 1;
+        continue;
+      }
+
+      if (/^###\s+/.test(line)) {
+        subsection = line.replace(/^###\s+/, "").trim();
+        i += 1;
+        continue;
+      }
+
+      var signatureMatch = line.match(/^\*\*`(.+?)`\*\*\s+\*\((.+?)\)\*\s+`(.+?)`$/);
+
+      if (!signatureMatch) {
+        i += 1;
+        continue;
+      }
+
+      var name = signatureMatch[1].trim();
+      var badge = signatureMatch[2].trim();
+      var stack = signatureMatch[3].trim();
+      var block = [line];
+      var description = [];
+      var definition = [];
+      var example = [];
+
+      i += 1;
+
+      while (i < lines.length) {
+        var nextLine = lines[i];
+        var trimmed = nextLine.trim();
+
+        if (
+          /^##\s+/.test(trimmed) ||
+          /^###\s+/.test(trimmed) ||
+          /^---\s*$/.test(trimmed) ||
+          /^\*\*`(.+?)`\*\*\s+\*\((.+?)\)\*\s+`(.+?)`$/.test(trimmed)
+        ) {
+          break;
+        }
+
+        block.push(nextLine);
+
+        if (trimmed === "**Definition**") {
+          i += 1;
+          while (i < lines.length) {
+            var definitionLine = lines[i];
+            var definitionTrimmed = definitionLine.trim();
+            if (/^\s*```/.test(definitionTrimmed)) {
+              block.push(definitionLine);
+              i += 1;
+              while (i < lines.length) {
+                var fenceLine = lines[i];
+                block.push(fenceLine);
+                if (/^\s*```/.test(fenceLine.trim())) {
+                  i += 1;
+                  break;
+                }
+                definition.push(fenceLine);
+                i += 1;
+              }
+              break;
+            }
+            if (definitionTrimmed) {
+              definition.push(definitionLine);
+            }
+            i += 1;
+          }
+          continue;
+        }
+
+        if (trimmed === "**Example**") {
+          i += 1;
+          while (i < lines.length) {
+            var exampleLine = lines[i];
+            var exampleTrimmed = exampleLine.trim();
+            if (/^\s*```/.test(exampleTrimmed)) {
+              block.push(exampleLine);
+              i += 1;
+              while (i < lines.length) {
+                var exampleFenceLine = lines[i];
+                block.push(exampleFenceLine);
+                if (/^\s*```/.test(exampleFenceLine.trim())) {
+                  i += 1;
+                  break;
+                }
+                example.push(exampleFenceLine);
+                i += 1;
+              }
+              break;
+            }
+            if (exampleTrimmed) {
+              example.push(exampleLine);
+            }
+            i += 1;
+          }
+          continue;
+        }
+
+        if (trimmed) {
+          description.push(nextLine);
+        }
+
+        i += 1;
+      }
+
+      var detail = [];
+      if (stack) detail.push(stack);
+      if (badge) detail.push(badge);
+
+      var location = makeLocation([document.section, document.title, section, subsection]);
+      var summaryParts = [];
+
+      if (description.length) {
+        summaryParts.push(stripMarkdown(description.join(" ").trim()));
+      }
+      if (definition.length) {
+        summaryParts.push("Definition: " + stripMarkdown(definition.join(" ").trim()));
+      }
+      if (example.length) {
+        summaryParts.push("Example: " + stripMarkdown(example.join(" ").trim()));
+      }
+
+      entries.push({
+        title: name,
+        section: location,
+        location: location,
+        parentTitle: document.title,
+        permalink: document.permalink + "#" + slugify(name),
+        summary: summaryParts.join(" "),
+        content: stripMarkdown(block.join("\n")),
+        detail: detail.join("  "),
+        kind: "word",
+        titleNorm: normalize(name),
+        sectionNorm: normalize(location),
+        summaryNorm: normalize(summaryParts.join(" ")),
+        contentNorm: normalize(stripMarkdown(block.join("\n"))),
+        parentTitleNorm: normalize(document.title),
+        detailNorm: normalize(detail.join(" "))
+      });
+
+      if (lines[i] && /^---\s*$/.test(lines[i].trim())) {
+        i += 1;
+      }
+    }
+
+    return entries;
+  }
+
+  function parseMarkdownSections(document) {
+    if (!document.rawContent || document.permalink === "/reference/words/") {
+      return [];
+    }
+
+    var lines = document.rawContent.split(/\r?\n/);
+    var sections = [];
+    var current = null;
+
+    function flushCurrent() {
+      if (!current) return;
+
+      var content = stripMarkdown(current.body.join("\n"));
+      if (!content) {
+        current = null;
+        return;
+      }
+
+      var location = makeLocation([document.section, document.title, current.heading]);
+
+      sections.push({
+        title: current.heading,
+        section: location,
+        location: location,
+        parentTitle: document.title,
+        permalink: document.permalink + "#" + slugify(current.heading),
+        summary: content,
+        content: content,
+        detail: document.title,
+        kind: "section",
+        titleNorm: normalize(current.heading),
+        sectionNorm: normalize(location),
+        summaryNorm: normalize(content),
+        contentNorm: normalize(content),
+        parentTitleNorm: normalize(document.title),
+        detailNorm: normalize(document.title)
+      });
+
+      current = null;
+    }
+
+    lines.forEach(function (line) {
+      var trimmed = line.trim();
+      var headingMatch = trimmed.match(/^##\s+(.+?)\s*$/);
+
+      if (headingMatch) {
+        flushCurrent();
+        current = {
+          heading: headingMatch[1].trim(),
+          body: []
+        };
+        return;
+      }
+
+      if (current) {
+        current.body.push(line);
+      }
+    });
+
+    flushCurrent();
+
+    return sections;
+  }
+
+  function hydratePageDocument(document) {
+    var location = makeLocation([document.section, document.title]);
+
+    return {
+      title: document.title,
+      section: location,
+      location: location,
+      parentTitle: document.title,
+      permalink: document.permalink,
+      summary: document.summary || "",
+      content: document.content || "",
+      detail: document.section,
+      kind: "page",
+      titleNorm: normalize(document.title),
+      sectionNorm: normalize(location),
+      summaryNorm: normalize(document.summary),
+      contentNorm: normalize(document.content),
+      parentTitleNorm: normalize(document.title),
+      detailNorm: normalize(document.section)
+    };
+  }
+
+  function hydrateDocuments(rawDocuments) {
+    return rawDocuments.reduce(function (allDocuments, document) {
+      var pageDocument = hydratePageDocument(document);
+      var sectionDocuments = parseMarkdownSections(document);
+      var wordDocuments = parseWordEntries(document);
+
+      if (wordDocuments.length) {
+        allDocuments.push.apply(allDocuments, wordDocuments);
+      }
+
+      if (sectionDocuments.length) {
+        allDocuments.push.apply(allDocuments, sectionDocuments);
+      }
+
+      allDocuments.push(pageDocument);
+      return allDocuments;
+    }, []);
+  }
+
   function scoreDocument(document, tokens, query) {
     var score = 0;
     var titleMatches = 0;
     var bodyMatches = 0;
+    var titleFuzzy = fuzzyTitleScore(document.titleNorm, query);
 
     if (!tokens.length) return 0;
 
-    if (document.titleNorm === query) score += 800;
-    if (document.titleNorm.indexOf(query) === 0) score += 320;
-    if (document.titleNorm.indexOf(query) !== -1) score += 180;
-    if (document.sectionNorm.indexOf(query) !== -1) score += 60;
+    if (document.titleNorm === query) score += 900;
+    if (document.titleNorm.indexOf(query) === 0) score += 340;
+    if (document.titleNorm.indexOf(query) !== -1) score += 190;
+    if (document.sectionNorm.indexOf(query) !== -1) score += 70;
+    if (document.parentTitleNorm.indexOf(query) !== -1) score += 40;
+    if (document.detailNorm.indexOf(query) !== -1) score += 48;
 
-    score += fuzzyTitleScore(document.titleNorm, query);
+    score += titleFuzzy;
 
     tokens.forEach(function (token) {
       if (document.titleNorm.indexOf(token) !== -1) {
-        score += 90;
+        score += 96;
         titleMatches += 1;
       }
+      if (document.detailNorm.indexOf(token) !== -1) {
+        score += 42;
+      }
       if (document.sectionNorm.indexOf(token) !== -1) {
-        score += 35;
+        score += 28;
       }
       if (document.summaryNorm.indexOf(token) !== -1) {
         score += 28;
         bodyMatches += 1;
       }
       if (document.contentNorm.indexOf(token) !== -1) {
-        score += 10;
+        score += 12;
         bodyMatches += 1;
       }
     });
 
-    if (!titleMatches && !bodyMatches && !fuzzyTitleScore(document.titleNorm, query)) {
+    if (!titleMatches && !bodyMatches && !titleFuzzy) {
       return 0;
     }
+
+    if (document.kind === "word") score += 56;
+    if (document.kind === "section") score += 20;
 
     return score;
   }
@@ -98,11 +407,11 @@
     });
 
     if (matchIndex === -1) {
-      return source.length > 150 ? source.slice(0, 147).trim() + "..." : source;
+      return source.length > 160 ? source.slice(0, 157).trim() + "..." : source;
     }
 
-    var start = Math.max(0, matchIndex - 48);
-    var end = Math.min(source.length, matchIndex + 110);
+    var start = Math.max(0, matchIndex - 54);
+    var end = Math.min(source.length, matchIndex + 116);
     var snippet = source.slice(start, end).trim();
 
     if (start > 0) snippet = "..." + snippet;
@@ -134,6 +443,7 @@
       var link = document.createElement("a");
       var meta = document.createElement("p");
       var title = document.createElement("p");
+      var detail = document.createElement("p");
       var snippet = document.createElement("p");
 
       item.className = "search-result-item";
@@ -141,35 +451,25 @@
       link.href = match.permalink;
 
       meta.className = "search-result-meta";
-      meta.textContent = match.section;
+      meta.textContent = match.location || match.section;
 
       title.className = "search-result-title";
       title.textContent = match.title;
+
+      detail.className = "search-result-detail";
+      detail.textContent = match.detail || match.parentTitle || "";
 
       snippet.className = "search-result-snippet";
       snippet.textContent = createSnippet(match, tokens);
 
       link.appendChild(meta);
       link.appendChild(title);
+      if (detail.textContent) {
+        link.appendChild(detail);
+      }
       link.appendChild(snippet);
       item.appendChild(link);
       resultsNode.appendChild(item);
-    });
-  }
-
-  function hydrateDocuments(rawDocuments) {
-    return rawDocuments.map(function (document) {
-      return {
-        title: document.title,
-        section: document.section,
-        permalink: document.permalink,
-        summary: document.summary || "",
-        content: document.content || "",
-        titleNorm: normalize(document.title),
-        sectionNorm: normalize(document.section),
-        summaryNorm: normalize(document.summary),
-        contentNorm: normalize(document.content)
-      };
     });
   }
 
@@ -210,6 +510,7 @@
 
     loadIndex().then(function (loadedDocuments) {
       var normalizedQuery = normalize(query);
+      var seenPermalinks = Object.create(null);
 
       var matches = loadedDocuments
         .map(function (document) {
@@ -222,9 +523,19 @@
           return entry.score > 0;
         })
         .sort(function (left, right) {
-          return right.score - left.score;
+          if (right.score !== left.score) {
+            return right.score - left.score;
+          }
+          return left.document.title.localeCompare(right.document.title);
         })
-        .slice(0, 8)
+        .filter(function (entry) {
+          if (seenPermalinks[entry.document.permalink]) {
+            return false;
+          }
+          seenPermalinks[entry.document.permalink] = true;
+          return true;
+        })
+        .slice(0, 16)
         .map(function (entry) {
           return entry.document;
         });
@@ -260,6 +571,13 @@
     button.addEventListener("click", closeSearch);
   });
 
+  resultsNode.addEventListener("click", function (event) {
+    var link = event.target.closest("a");
+    if (link) {
+      closeSearch();
+    }
+  });
+
   document.addEventListener("keydown", function (event) {
     var isShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k";
 
@@ -287,6 +605,10 @@
         openSearch();
       }
     }
+  });
+
+  window.addEventListener("hashchange", function () {
+    if (active) closeSearch();
   });
 
   input.addEventListener("input", runSearch);
