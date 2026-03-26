@@ -13,7 +13,7 @@ Blinking an LED is the simplest proof that your code is reaching the hardware. B
 - Chapter 08 basics (GPIO words: `gpio.mode`, `gpio.write`, `gpio.read`; timing: `ms`)
 - Hardware: ESP32 DevKit v1 (or a compatible ESP32 board with a built-in LED)
 - VSCode with the Froth extension installed and connected
-- Verification: the REPL is active and `1 1 + .` prints `2`
+- Verification: the REPL is active and `123 .` prints `123`
 
 If the REPL isn't responding, troubleshoot the connection before continuing. Everything in this tutorial requires a live connection to the board.
 
@@ -42,11 +42,11 @@ Plug in your ESP32. In VSCode, the Froth extension should detect the board and o
 Verify the connection:
 
 ```froth
-froth> 1 1 + .
-2
+froth> 123 .
+123
 ```
 
-If you don't see `2`, the REPL isn't working. Check the connection before continuing.
+If you don't see `123`, the REPL isn't working. Check the connection before continuing.
 
 ## Step 2 — Configure the LED pin
 
@@ -86,13 +86,22 @@ If the LED doesn't light up:
 
 ## Step 4 — Add timing
 
-Toggle with a delay:
+First, do it the long way so each step is visible:
+
+```froth
+froth> LED_BUILTIN 1 gpio.write
+froth> 500 ms
+froth> LED_BUILTIN 0 gpio.write
+froth> 500 ms
+```
+
+LED on, wait 500ms, LED off, wait 500ms. You should see a single blink.
+
+Once that sequence feels obvious, you can type the same thing on one line:
 
 ```froth
 froth> LED_BUILTIN 1 gpio.write  500 ms  LED_BUILTIN 0 gpio.write  500 ms
 ```
-
-LED on, wait 500ms, LED off, wait 500ms. You should see a single blink.
 
 `ms ( n -- )` blocks for `n` milliseconds. The CPU waits; no other Froth words execute during the delay.
 
@@ -106,7 +115,16 @@ froth> : blink ( delay -- )
 ...     LED_BUILTIN 0 gpio.write  ms ;
 ```
 
-The word takes one argument, the delay in milliseconds, and uses it for both the on-phase and the off-phase. `dup ms` duplicates the delay value so it survives the first `ms` call and is still available for the second one. Without `dup`, the first `ms` would consume the value and the second would try to pop from an empty stack.
+The word takes one argument, the delay in milliseconds, and uses it for both the on-phase and the off-phase. `dup ms` duplicates the delay so one copy can be consumed by the first `ms` and the other can survive for the second `ms`.
+
+If you trace `500 blink`, the stack goes like this:
+
+1. Start with `[500]`
+2. `LED_BUILTIN 1 gpio.write` turns the LED on and leaves `[500]`
+3. `dup` makes `[500, 500]`
+4. `ms` consumes the top delay, leaving `[500]`
+5. `LED_BUILTIN 0 gpio.write` turns the LED off and still leaves `[500]`
+6. Final `ms` consumes the remaining delay, leaving `[]`
 
 Test it:
 
@@ -133,10 +151,11 @@ froth> : blink-n ( count delay -- )
 `times ( n q -- )` consumes the count and calls the quotation `n` times. After `swap`, the stack holds `[delay count]`. `times` consumes `count` and runs the quotation repeatedly. Each iteration sees `[delay]` on the stack, `dup`s it for `blink`, and the original delay stays put for the next iteration. The final `drop` discards the delay when all iterations are done.
 
 ```froth
+froth> 2 300 blink-n
 froth> 5 500 blink-n
 ```
 
-Watch the LED blink exactly 5 times.
+Start with `2 300 blink-n` so you can check the behavior quickly, then try a longer run like `5 500 blink-n`.
 
 ## Step 7 — Make timing configurable with a named value
 
