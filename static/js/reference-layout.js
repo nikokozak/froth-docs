@@ -1,4 +1,13 @@
 (function () {
+  function slugify(value) {
+    return (value || "")
+      .toLowerCase()
+      .trim()
+      .replace(/[`']/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
   function wrapTables(root) {
     root.querySelectorAll("table").forEach(function (table) {
       if (table.parentElement && table.parentElement.classList.contains("ref-table-wrap")) {
@@ -19,6 +28,7 @@
 
     var children = Array.from(content.children);
     var current = null;
+    var seenIds = Object.create(null);
 
     function isSignature(node) {
       return (
@@ -46,6 +56,20 @@
         node.parentNode.insertBefore(current, node);
         current.appendChild(node);
         node.classList.add("ref-entry-signature");
+
+        var wordCode = node.querySelector("strong code");
+        var slug = wordCode ? slugify(wordCode.textContent) : "";
+
+        if (slug) {
+          if (seenIds[slug]) {
+            seenIds[slug] += 1;
+            slug += "-" + seenIds[slug];
+          } else {
+            seenIds[slug] = 1;
+          }
+
+          current.id = slug;
+        }
 
         var badge = node.querySelector("em");
         if (badge) {
