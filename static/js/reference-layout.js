@@ -86,13 +86,9 @@
         if (node.tagName === "P" && node.textContent) {
           var label = node.textContent.trim();
 
-          if (label === "Example") {
+          if (label === "Example" || label === "Definition") {
             node.remove();
             return;
-          }
-
-          if (label === "Definition") {
-            node.classList.add("ref-block-label");
           }
         }
       }
