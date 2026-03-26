@@ -11,7 +11,7 @@ This tutorial is pure software. You don't need a board plugged in; the REPL on a
 
 - Chapters 00–06 of the guide (the stack, word definitions, quotations, `if`, `while`, error handling with `catch`/`throw`)
 - The Froth REPL running (local POSIX target is fine)
-- Verification: `4 3 + .` should print `7`
+- Verification: `9 .` should print `9`
 
 ## What you are building
 
@@ -34,13 +34,14 @@ Before writing new words, confirm the arithmetic primitives behave as expected:
 ```froth
 froth> 3 4 + .
 7
-froth> 10 3 /mod . .
-3 1
+froth> 10 3 /mod .s
+[1, 3]
+froth> drop drop
 ```
 
-`/mod ( a b -- remainder quotient )` returns the remainder below the quotient on the stack. The first `.` prints the quotient (3), the second prints the remainder (1). That output means 10 divided by 3 is 3, remainder 1.
+The first line is a quick confidence check: push 3, push 4, add them, print the result.
 
-After each line, the stack should be empty. If it's not, call `.s` to see what's there, then `drop` until it's clear.
+The second line is there to show what `/mod ( a b -- remainder quotient )` actually leaves on the stack. After `10 3 /mod`, the stack is `[1, 3]`: remainder `1` below, quotient `3` on top. `drop drop` clears those two values so you start the next step with an empty stack.
 
 ## Step 2 — Define `square`
 
@@ -68,7 +69,7 @@ froth> 4 cube .
 
 `dup square *`: duplicate the value (giving `n n` on the stack), call `square` on the top copy (giving `n n*n`), then multiply (giving `n*n*n`).
 
-`cube` calls `square`. If you redefine `square` later, `cube` automatically uses the new version. That's coherent redefinition from chapter 03, working in practice.
+`cube` calls `square`. If you redefine `square` later, `cube` automatically uses the new version. That's coherent redefinition from the guide, working in practice.
 
 ## Step 4 — Define `factorial`
 
@@ -122,11 +123,14 @@ froth> : safe/mod ( a b -- remainder quotient )
 In the success case, `dup 0 =` is true, we `drop` the zero and the result of `/mod` is already on the stack. In the error case, the stack has been restored to `[a b]` with the error code on top, so we drop all three and print the message.
 
 ```froth
-froth> 10 2 safe/mod . .
-5 0
+froth> 10 2 safe/mod .s
+[0, 5]
+froth> drop drop
 froth> 7 0 safe/mod
 Error: division by zero
 ```
+
+The successful case leaves the same stack shape as `/mod`: remainder below, quotient on top.
 
 ## Step 6 — Build `calculate`
 
