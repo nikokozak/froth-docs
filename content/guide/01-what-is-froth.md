@@ -19,20 +19,26 @@ Froth keeps what Forth got right and fixes what it got wrong. Redefinition in Fr
 
 Everything in Froth operates on a stack. When you type a number, it goes onto the stack. When you type a word, it takes values from the stack, does something with them, and pushes results back. The stack is the connective tissue between every operation.
 
-Here's what that looks like:
+Here's the smallest useful trace:
 
 ```froth
-3 4 +
-\ Stack: [7]
-
-2 *
-\ Stack: [14]
-
-dup +
-\ Stack: [28]
+froth> 3
+Stack: [3]
+froth> 4
+Stack: [3, 4]
+froth> +
+Stack: [7]
+froth> 2
+Stack: [7, 2]
+froth> *
+Stack: [14]
+froth> dup
+Stack: [14, 14]
+froth> +
+Stack: [28]
 ```
 
-The number `3` goes onto the stack. Then `4` goes onto the stack. The word `+` takes both of them off, adds them, and pushes `7`. Then `2` goes on, and `*` multiplies the top two values to produce `14`. The word `dup` duplicates the top value, giving you two copies of `14`, and `+` adds them together to give `28`. Each word does one thing, consumes its inputs, and produces its output.
+Nothing is implicit there. `3` pushes 3. `4` pushes 4. `+` consumes those two values and leaves `7`. Then `2` is pushed, `*` consumes `7` and `2`, and leaves `14`. `dup` copies the top value, and the final `+` adds those two copies. Each word does one thing, consumes its inputs, and produces its output.
 
 You might notice that the operator comes after the operands, not between them. This is called postfix notation. Instead of writing `3 + 4`, you write `3 4 +`. It feels unfamiliar at first, but it has a useful property: there is no ambiguity about order of operations and no need for parentheses. The code reads left to right, one word at a time, and each word acts on whatever is currently on the stack.
 
@@ -50,4 +56,4 @@ When you've built up a session you want to keep, you take a snapshot. This saves
 
 This guide assumes no knowledge of Forth or stack-based programming. It starts with getting Froth installed and connected to a board, then teaches you the stack, word definitions, and the `perm` primitive that makes stack manipulation expressive instead of cryptic. Each chapter builds on the previous one, and by chapter 08 you'll be reading sensors and toggling pins from words you wrote yourself.
 
-[Next: Getting Started](01-getting-started.md)
+[Next: Getting Started](02-getting-started.md)
