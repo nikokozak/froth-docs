@@ -46,18 +46,30 @@
         node.parentNode.insertBefore(current, node);
         current.appendChild(node);
         node.classList.add("ref-entry-signature");
+
+        var badge = node.querySelector("em");
+        if (badge) {
+          badge.classList.add("ref-entry-badge");
+          badge.textContent = badge.textContent.replace(/[()]/g, "").trim();
+        }
+
         return;
       }
 
       if (current) {
         current.appendChild(node);
 
-        if (
-          node.tagName === "P" &&
-          node.textContent &&
-          (node.textContent.trim() === "Definition" || node.textContent.trim() === "Example")
-        ) {
-          node.classList.add("ref-block-label");
+        if (node.tagName === "P" && node.textContent) {
+          var label = node.textContent.trim();
+
+          if (label === "Example") {
+            node.remove();
+            return;
+          }
+
+          if (label === "Definition") {
+            node.classList.add("ref-block-label");
+          }
         }
       }
     });
