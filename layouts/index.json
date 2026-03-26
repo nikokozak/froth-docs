@@ -1,0 +1,13 @@
+[
+  {{- $pages := where .Site.RegularPages "Params.searchExclude" "!=" true -}}
+  {{- range $index, $page := $pages.ByTitle -}}
+    {{- if $index }},{{ end }}
+    {
+      "title": {{ $page.Title | jsonify }},
+      "section": {{ $page.Section | humanize | jsonify }},
+      "permalink": {{ $page.RelPermalink | jsonify }},
+      "summary": {{ (or $page.Description $page.Summary) | plainify | htmlUnescape | jsonify }},
+      "content": {{ $page.Plain | htmlUnescape | jsonify }}
+    }
+  {{- end -}}
+]

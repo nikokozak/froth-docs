@@ -1,0 +1,26 @@
+{{ define "main" }}
+<article class="page">
+  <header class="page-header">
+    <h1>{{ .Title }}</h1>
+  </header>
+
+  {{ $section := .Parent }}
+  {{ if and $section (ne $section.Kind "home") }}
+  <nav class="page-nav-top">
+    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}" class="prev">&larr; {{ .Title }}</a>{{ end }}
+    {{ with .NextInSection }}<a href="{{ .RelPermalink }}" class="next">{{ .Title }} &rarr;</a>{{ end }}
+  </nav>
+  {{ end }}
+
+  <div class="content">
+    {{ .Content }}
+  </div>
+
+  {{ if and $section (ne $section.Kind "home") }}
+  <nav class="page-nav-bottom">
+    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}" class="prev">&larr; {{ .Title }}</a>{{ end }}
+    {{ with .NextInSection }}<a href="{{ .RelPermalink }}" class="next">{{ .Title }} &rarr;</a>{{ end }}
+  </nav>
+  {{ end }}
+</article>
+{{ end }}
