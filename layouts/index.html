@@ -1,5 +1,10 @@
 {{ define "main" }}
 <article class="homepage">
+  {{ if fileExists "static/images/home-hero.png" }}
+  <figure class="home-hero">
+    <img src="{{ "images/home-hero.png" | relURL }}" alt="Froth hero artwork">
+  </figure>
+  {{ end }}
   <div class="content">
     {{ .Content }}
   </div>
