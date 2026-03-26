@@ -230,8 +230,8 @@ main {
 .content pre {
   background: var(--color-code-bg);
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 16px 20px;
+  border-radius: 10px;
+  padding: 16px 18px;
   overflow-x: auto;
   margin: 16px 0 24px;
   line-height: 1.5;
@@ -547,6 +547,182 @@ body.search-open {
   overflow: hidden;
 }
 
+/* === Reference === */
+.reference-page {
+  --reference-width: 860px;
+}
+
+.reference-page main,
+main .reference-page {
+  max-width: var(--reference-width);
+}
+
+.reference-page .page-header h1,
+.reference-page.section-page .page-header h1 {
+  margin-bottom: 14px;
+}
+
+.reference-page .content {
+  font-size: 1rem;
+}
+
+.reference-page .content h2 {
+  margin-top: 56px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border);
+}
+
+.reference-page .content h3 {
+  margin-top: 28px;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.reference-page .content p + table,
+.reference-page .content p + pre,
+.reference-page .content p + ul,
+.reference-page .content p + ol {
+  margin-top: -6px;
+}
+
+.reference-page .content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 18px 0 28px;
+  font-size: 0.95rem;
+  display: block;
+  overflow-x: auto;
+}
+
+.reference-page .content table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg);
+  z-index: 1;
+}
+
+.reference-page .content th,
+.reference-page .content td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.reference-page .content th {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+
+.reference-page .content tbody tr:nth-child(even) td {
+  background: var(--color-hover-bg);
+}
+
+.reference-page .content pre {
+  margin: 14px 0 24px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.reference-page .content code {
+  font-size: 0.84em;
+}
+
+.reference-page .content pre code {
+  font-size: 0.9rem;
+}
+
+.reference-page .content pre code.language-sh,
+.reference-page .content pre code.language-text {
+  color: var(--color-text);
+}
+
+.reference-page .content pre code.language-sh::before {
+  content: "shell";
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.reference-page .content pre code.language-froth::before {
+  content: "froth";
+  display: block;
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.reference-page.page-words .content > p {
+  margin-bottom: 14px;
+}
+
+.ref-entry {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px 18px 2px;
+  margin: 18px 0 22px;
+  background:
+    linear-gradient(180deg, var(--color-hover-bg), transparent 44%),
+    var(--color-bg);
+}
+
+.ref-entry > :first-child {
+  margin-top: 0;
+}
+
+.ref-entry-signature {
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+.ref-entry-signature code:last-child {
+  color: var(--color-text-secondary);
+}
+
+.ref-entry .ref-block-label {
+  margin-bottom: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+.ref-entry pre {
+  margin-top: 0;
+}
+
+.ref-entry > hr {
+  margin: 18px 0;
+}
+
+.ref-table-wrap {
+  margin: 18px 0 28px;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+
+.ref-table-wrap table {
+  margin: 0;
+  border: 0;
+}
+
+.ref-table-wrap table th,
+.ref-table-wrap table td {
+  min-width: 140px;
+}
+
 /* === Responsive === */
 @media (max-width: 640px) {
   html { font-size: 16px; }
@@ -573,6 +749,10 @@ body.search-open {
   }
   .home-hero {
     margin-bottom: 28px;
+  }
+  .ref-entry {
+    padding: 14px 14px 0;
+    border-radius: 12px;
   }
   main { padding: 32px 16px 64px; }
   .content h1 { font-size: 1.6rem; }
