@@ -7,7 +7,8 @@
       "section": {{ $page.Section | humanize | jsonify }},
       "permalink": {{ $page.RelPermalink | jsonify }},
       "summary": {{ (or $page.Description $page.Summary) | plainify | htmlUnescape | jsonify }},
-      "content": {{ $page.Plain | htmlUnescape | jsonify }}
+      "content": {{ $page.Plain | htmlUnescape | jsonify }},
+      "rawContent": {{ $page.RawContent | jsonify }}
     }
   {{- end -}}
 ]
