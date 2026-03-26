@@ -18,16 +18,20 @@ A Froth program grows by defining new words in terms of existing ones. You name 
 The syntax for defining a word is `: name body ;`. The colon opens the definition and is followed immediately by the name you're choosing. The body is one or more words that will run when the name is called. The semicolon closes the definition.
 
 ```froth
-: double ( n -- n ) 2 * ;
+: double ( n -- doubled ) 2 * ;
 ```
 
-Read this as: "Define a word called `double`. When called, it pushes 2 and then multiplies." The `( n -- n )` part is a stack effect comment. It says the word expects one value on the stack and leaves one value. More on that convention shortly.
+Read this as: "Define a word called `double`. When called, it pushes 2 and then multiplies." The `( n -- doubled )` part is a stack effect comment. It says the word expects one number on the stack and leaves one number behind. More on that convention shortly.
 
 Test it:
 
 ```froth
-froth> : double ( n -- n ) 2 * ;
-froth> 5 double .
+froth> : double ( n -- doubled ) 2 * ;
+froth> 5
+Stack: [5]
+froth> double
+Stack: [10]
+froth> .
 10
 froth> 3 double .
 6
@@ -62,7 +66,7 @@ The `'` (tick) prefix is important. Without it, writing `double def` would tell 
 Both forms produce exactly the same result. You can verify this by defining one word each way and checking that they behave identically:
 
 ```froth
-froth> : double ( n -- n ) 2 * ;
+froth> : double ( n -- doubled ) 2 * ;
 froth> [ 3 * ] 'triple def
 froth> 4 double .
 8
@@ -81,8 +85,8 @@ When you call a word, Froth finds the slot for that name and runs whatever is in
 This distinction matters as soon as one word uses another. Consider:
 
 ```froth
-: double ( n -- n ) 2 * ;
-: quadruple ( n -- n ) double double ;
+: double ( n -- doubled ) 2 * ;
+: quadruple ( n -- quadrupled ) double double ;
 ```
 
 After these definitions, two slots exist:
@@ -108,7 +112,7 @@ This lookup happens at call time, every time. You can inspect any word's current
 
 ```froth
 froth> see double
-: double ( n -- n ) 2 * ;
+: double ( n -- doubled ) 2 * ;
 ```
 
 The output is the definition reconstructed from the stored quotation.
@@ -118,8 +122,8 @@ The output is the definition reconstructed from the stored quotation.
 Here is where the slot model pays off. Define `double` and `quadruple`:
 
 ```froth
-froth> : double ( n -- n ) 2 * ;
-froth> : quadruple ( n -- n ) double double ;
+froth> : double ( n -- doubled ) 2 * ;
+froth> : quadruple ( n -- quadrupled ) double double ;
 froth> 3 quadruple .
 12
 ```
@@ -129,7 +133,7 @@ froth> 3 quadruple .
 Now redefine `double`. Give it a different body, but keep the same name:
 
 ```froth
-froth> : double ( n -- n ) 3 * ;
+froth> : double ( n -- result ) 3 * ;
 ```
 
 Call `quadruple` again, without changing its definition:
@@ -151,7 +155,7 @@ Froth's approach eliminates that class of problem. At the REPL, where you are co
 
 The `( inputs -- outputs )` comment inside a definition is a convention, not something the language enforces. You can omit it and the word will compile and run the same way. But writing stack effects is worth the few extra keystrokes.
 
-A stack effect comment forces you to state what your word expects and what it promises. When you write `( n -- n )`, you are committing to: "this word takes one value and leaves one value." Someone reading your code, including you six months from now, can understand the interface without reading the body.
+A stack effect comment forces you to state what your word expects and what it promises. When you write `( n -- doubled )`, you are committing to: "this word takes one value and leaves one value, and that value is the doubled result." Someone reading your code, including you six months from now, can understand the interface without reading the body.
 
 The convention for labels:
 
@@ -160,7 +164,7 @@ The convention for labels:
 - Write the stack effect right after the word name, before the body.
 
 ```froth
-: increment ( n -- n ) 1 + ;
+: increment ( n -- incremented ) 1 + ;
 : add ( a b -- sum ) + ;
 : print-top ( n -- ) . ;
 ```
@@ -169,15 +173,15 @@ The VSCode extension reads these comments to display inline hints as you type. G
 
 ## Exercises
 
-**Exercise 1.** Define `: triple ( n -- n ) 3 * ;` and test it.
+**Exercise 1.** Define `: triple ( n -- tripled ) 3 * ;` and test it.
 
 - What does `4 triple .` print?
 - What does `2 triple triple .` print?
 
-**Exercise 2.** Define `triple` as above. Then define `: sextuple ( n -- n ) triple triple ;`.
+**Exercise 2.** Define `triple` as above. Then define `: sextuple ( n -- result ) triple triple ;`.
 
 - What does `2 sextuple .` print?
-- Redefine `triple` as `: triple ( n -- n ) 4 * ;`. What does `2 sextuple .` print now, without redefining `sextuple`?
+- Redefine `triple` as `: triple ( n -- result ) 4 * ;`. What does `2 sextuple .` print now, without redefining `sextuple`?
 - If you expected the answer to stay the same, think about what `sextuple` looks up when it runs.
 
 **Exercise 3.** Write the correct stack effect comment for each of these definitions:
