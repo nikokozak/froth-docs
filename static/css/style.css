@@ -445,6 +445,10 @@ main {
   overflow-y: auto;
 }
 
+.search-shell[hidden] {
+  display: none;
+}
+
 .search-backdrop {
   position: absolute;
   inset: 0;
