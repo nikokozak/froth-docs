@@ -1,5 +1,5 @@
 {{ define "main" }}
-<article class="section-page">
+<article class="section-page{{ if eq .Section "reference" }} reference-page{{ end }}{{ with .File }} page-{{ .BaseFileName }}{{ end }}">
   <header class="page-header">
     <h1>{{ .Title }}</h1>
   </header>
