@@ -193,5 +193,3 @@ The VSCode extension reads these comments to display inline hints as you type. G
 **Exercise 4.** Define any word, then run `see` on it. Verify that the output matches what you defined.
 
 Each value on the stack can only be used once, because the word that consumes it removes it. If you have found yourself wanting to use the same value twice in one word body, the next chapter introduces `perm`, which gives you control over exactly that problem.
-
-[Previous: The Stack](03-the-stack.md) | [Next: Perm and Named](05-perm-and-named.md)
