@@ -15,8 +15,6 @@ But some things do belong in C:
 
 That is the good news.
 
-The important constraint is this: **custom C is not part of the live REPL loop.** Froth source can be sent and redefined interactively. C bindings are compiled into firmware. If you change C, you rebuild, flash, and reconnect.
-
 ## The current state
 
 Froth already has a real C FFI layer. The runtime exposes public helper functions and macros for defining native words, and the board packages use that mechanism today.
@@ -97,11 +95,6 @@ Once the firmware is rebuilt and flashed, the new word behaves like any other wo
 \ 10
 ```
 
-The important thing to notice is that the boundary is one-way in terms of workflow:
-
-- the **binding** is static firmware
-- the **use** of the binding is live Froth
-
 That split is often good enough. Put the narrow, performance-sensitive operation in C. Keep the orchestration, composition, and experimentation in Froth.
 
 ## A realistic workflow today
@@ -145,10 +138,9 @@ Here is the honest line:
 **Not easy today**
 
 - per-project, one-off C helpers wired cleanly through an ordinary `froth.toml` project
-- hot-reloading C in the same way Froth source is hot-reloaded
 - treating custom C as just another file in the interactive editor loop
 
-So if your question is "can I write a small custom C function for something like an audio inner loop," the answer is **yes, but not as a live one-file project trick yet**. Today it is still a build/flash boundary.
+So if your question is "can I write a small custom C function for something like an audio inner loop," the answer is yes. The missing part is the clean per-project path.
 
 ## How to think about the split
 
