@@ -232,5 +232,3 @@ On hardware, `key` reads from the same serial channel the REPL uses. While `echo
 **Exercise 4.** Write an expression that tests whether `"foo"` equals `"foo"` and prints the result.
 
 **Exercise 5.** Define a word `greet ( -- )` that prints `hello, world` followed by a newline, using `s.emit` and `cr`.
-
-[Previous: Error Handling]({{< relref "07-error-handling" >}}) | [Next: Talking to Hardware]({{< relref "09-talking-to-hardware" >}})
