@@ -262,7 +262,3 @@ When the BOOT button is pressed (GPIO 0 reads `0`), `toggle-speed` swaps the del
 - **`times` for counted repetition:** `5 [ 500 blink ] times` blinks 5 times.
 - **`autorun` for standalone deployment:** define `autorun`, call `save`, power-cycle. The board runs your program at boot.
 - **Safe boot:** hold BOOT during power-on to skip `autorun` and get a clean REPL.
-
----
-
-[Next: Read a Button →](read-a-button.md)
