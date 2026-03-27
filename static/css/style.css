@@ -394,6 +394,15 @@ main {
   color: var(--color-text-secondary);
 }
 
+.section-list-heading {
+  margin: 40px 0 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
 /* === Footer === */
 .site-footer {
   border-top: 1px solid var(--color-border);
