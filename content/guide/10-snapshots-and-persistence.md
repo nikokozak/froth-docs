@@ -195,5 +195,3 @@ In practice, this is rare. Word definitions, numbers, strings you created at the
 **Wipe and restart.** Call `snapshot-wipe`, then power-cycle. Confirm that the previous `autorun` no longer runs and the session starts clean.
 
 **Mark and release.** Run `mark`, define two or three temporary words, test them, then `release`. Verify the words are no longer defined.
-
-[Next: Where to Go Next]({{< relref "11-where-to-go-next" >}})
