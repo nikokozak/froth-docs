@@ -3,6 +3,8 @@ title: "Getting Started"
 weight: 2
 ---
 
+If you do not have a `froth>` prompt yet, go to [Install](/install/) first.
+
 You have a REPL prompt. Type `42` and press Enter.
 
 ```
