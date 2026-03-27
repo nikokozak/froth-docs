@@ -335,5 +335,3 @@ Note: ADC support may not be available in all Froth firmware builds. If `adc.rea
 **Exercise 4.** Using `ledc.setup` and `ledc.duty`, fade the LED from off to full brightness over about 2 seconds, then turn off PWM.
 
 **Exercise 5 (challenge).** Write a program where pressing and releasing the BOOT button cycles the LED through four brightness levels using PWM: off, dim (256), medium (512), full (1023), then back to off. You will need a variable or a stack value that tracks the current level across button presses.
-
-[Previous: Strings and I/O]({{< relref "08-strings-and-io" >}}) | [Next: Snapshots and Persistence]({{< relref "10-snapshots-and-persistence" >}})
