@@ -204,5 +204,3 @@ frobnicate
 **Exercise 3.** Define a word `nonzero! ( n -- n )` that leaves `n` on the stack if it is nonzero and throws error code 101 if it is zero. Test it with `5 nonzero! .` and `0 nonzero! .`.
 
 **Exercise 4 (challenge).** Write a nested `catch` expression where an inner `catch` handles a division-by-zero error and an outer `catch` sees no error. Trace the stack at each step to confirm your understanding.
-
-[Previous: Quotations and Control Flow]({{< relref "06-quotations-and-control" >}}) | [Next: Strings and I/O]({{< relref "08-strings-and-io" >}})
