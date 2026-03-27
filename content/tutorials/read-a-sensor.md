@@ -273,7 +273,3 @@ Each word does one thing. `sensor-loop` composes them. This is how Froth program
 - **Named constants with `def`:** `34 'sensor-pin def` and `2000 'alert-threshold def` make the program configurable without touching word definitions.
 - **`dup` before branching:** when you need a value for both the test and the output, `dup` it before the comparison.
 - **Composing hardware words:** `check-threshold` combines a comparison with GPIO output, taking one value and returning the same value unchanged.
-
----
-
-[← Read a Button](read-a-button.md) | [Next: Fade an LED →](fade-an-led.md)
