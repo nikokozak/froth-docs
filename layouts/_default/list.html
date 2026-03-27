@@ -8,8 +8,13 @@
     {{ .Content }}
   </div>
 
+  {{ $pages := .Pages.ByWeight }}
+  {{ if eq .Section "guide" }}
+  {{ $mainPages := where $pages "Params.advanced" "!=" true }}
+  {{ $advancedPages := where $pages "Params.advanced" true }}
+
   <ol class="page-list">
-    {{ range .Pages.ByWeight }}
+    {{ range $mainPages }}
     <li>
       <a href="{{ .RelPermalink }}">
         <span class="page-list-title">{{ .Title }}</span>
@@ -18,5 +23,32 @@
     </li>
     {{ end }}
   </ol>
+
+  {{ if gt (len $advancedPages) 0 }}
+  <h2 class="section-list-heading">Advanced</h2>
+  <ol class="page-list">
+    {{ range $advancedPages }}
+    <li>
+      <a href="{{ .RelPermalink }}">
+        <span class="page-list-title">{{ .Title }}</span>
+        {{ with .Description }}<span class="page-list-desc">{{ . }}</span>{{ end }}
+      </a>
+    </li>
+    {{ end }}
+  </ol>
+  {{ end }}
+
+  {{ else }}
+  <ol class="page-list">
+    {{ range $pages }}
+    <li>
+      <a href="{{ .RelPermalink }}">
+        <span class="page-list-title">{{ .Title }}</span>
+        {{ with .Description }}<span class="page-list-desc">{{ . }}</span>{{ end }}
+      </a>
+    </li>
+    {{ end }}
+  </ol>
+  {{ end }}
 </article>
 {{ end }}
