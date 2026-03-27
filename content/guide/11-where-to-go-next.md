@@ -3,7 +3,9 @@ title: "Where to Go Next"
 weight: 11
 ---
 
-You have a working vocabulary, a board that runs your code at boot, and a REPL you can reconnect to at any time. The guide is done. Here is where to find everything else.
+You have a working vocabulary, a board that runs your code at boot, and a REPL you can reconnect to at any time. The core guide is done.
+
+If you want to keep going, the advanced section starts with [FFI and C Integration](/guide/12-ffi-and-c/). If you would rather branch out, here is where to find everything else.
 
 ## Reference
 
