@@ -197,7 +197,3 @@ Replace `BOOT_BUTTON` with `15` in any of the words above and they'll work with 
 - **`when` for conditional execution:** `flag [ action ] when` runs the action only if the flag is true.
 - **State with `def`:** `'led-state def` creates a mutable named slot. Read it by name, update it by pushing a new value and calling `def` again.
 - **Edge detection / debouncing:** compare the current reading to the previous reading to detect transitions. React on the falling edge, not on the steady state.
-
----
-
-[← Blink an LED](blink-an-led.md) | [Next: Read a Sensor →](read-a-sensor.md)
