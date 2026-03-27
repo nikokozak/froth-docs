@@ -446,7 +446,3 @@ Send with Cmd+Enter. Save. Power-cycle. The program starts immediately and count
 6. **`catch` contains experiments.** Protect the session during risky tests.
 
 The habits here are what make Froth feel different from other embedded workflows. Build them early.
-
----
-
-[← Build a Calculator](build-a-calculator.md) | [Guide: What is Froth? →](../guide/01-what-is-froth.md)
