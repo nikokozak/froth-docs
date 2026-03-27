@@ -7,8 +7,8 @@
   {{ $section := .Parent }}
   {{ if and $section (ne $section.Kind "home") }}
   <nav class="page-nav-top">
-    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}" class="prev">&larr; {{ .Title }}</a>{{ end }}
-    {{ with .NextInSection }}<a href="{{ .RelPermalink }}" class="next">{{ .Title }} &rarr;</a>{{ end }}
+    {{ with .NextInSection }}<a href="{{ .RelPermalink }}" class="prev">&larr; {{ .Title }}</a>{{ end }}
+    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}" class="next">{{ .Title }} &rarr;</a>{{ end }}
   </nav>
   {{ end }}
 
@@ -18,8 +18,8 @@
 
   {{ if and $section (ne $section.Kind "home") }}
   <nav class="page-nav-bottom">
-    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}" class="prev">&larr; {{ .Title }}</a>{{ end }}
-    {{ with .NextInSection }}<a href="{{ .RelPermalink }}" class="next">{{ .Title }} &rarr;</a>{{ end }}
+    {{ with .NextInSection }}<a href="{{ .RelPermalink }}" class="prev">&larr; {{ .Title }}</a>{{ end }}
+    {{ with .PrevInSection }}<a href="{{ .RelPermalink }}" class="next">{{ .Title }} &rarr;</a>{{ end }}
   </nav>
   {{ end }}
 </article>
