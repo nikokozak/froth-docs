@@ -203,7 +203,3 @@ You built this one word at a time, testing at each step. Small pieces, verified 
 - **Error handling in practice:** `catch` gives you the error code and a clean stack. Check the code, handle or rethrow, drop what you don't need.
 - **String dispatch:** `s.=` compares strings. The `dup ... when` pattern checks multiple strings without consuming the original.
 - **Interactive development:** you built and tested each piece before composing them. Every word you define is immediately available to test.
-
----
-
-[← Drive a Servo](drive-a-servo.md) | [Next: Interactive Workflow →](interactive-workflow.md)
