@@ -28,4 +28,4 @@ The standard library is written in Froth. `dup`, `swap`, `drop` — they're all 
 
 ---
 
-[Start the guide](/guide/01-what-is-froth/) — or [skip straight to installing](/guide/00-installation/).
+[Start the guide](/guide/01-what-is-froth/) — or [install Froth first](/install/).
