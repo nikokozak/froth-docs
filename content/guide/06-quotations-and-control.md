@@ -255,5 +255,3 @@ This means a named word and an anonymous quotation are the same kind of thing fr
 **Exercise 4.** You have `[2 3]` on the stack (3 on top). You want to add 10 to the value below the top without disturbing the top. Write the expression using `dip`.
 
 **Exercise 5.** Write an expression using `times` that starts with 1 on the stack and doubles it 4 times. What is the final value?
-
-[Previous: Perm and Named](05-perm-and-named.md) | [Next: Error Handling](07-error-handling.md)
