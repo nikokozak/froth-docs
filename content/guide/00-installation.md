@@ -76,5 +76,3 @@ froth>
 ```
 
 That's the REPL prompt. Everything from here on is the same whether you're on hardware or running locally.
-
-[Next: What is Froth?](01-what-is-froth.md)
