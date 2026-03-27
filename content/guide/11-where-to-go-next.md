@@ -32,5 +32,3 @@ Froth is open source. The repository contains the runtime, the standard library,
 - `lib/board.froth` for your board is the hardware abstraction layer, mapping pin names and peripheral access to Froth words.
 
 If you have found a bug, want to add a board target, or want to improve the documentation, see `CONTRIBUTING.md` in the repository for how to get started.
-
-[Back to Guide Index](/guide/)
