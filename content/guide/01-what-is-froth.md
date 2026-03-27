@@ -55,5 +55,3 @@ When you've built up a session you want to keep, you take a snapshot. This saves
 ## How this guide works
 
 This guide assumes no knowledge of Forth or stack-based programming. It starts with getting Froth installed and connected to a board, then teaches you the stack, word definitions, and the `perm` primitive that makes stack manipulation expressive instead of cryptic. Each chapter builds on the previous one, and by chapter 08 you'll be reading sensors and toggling pins from words you wrote yourself.
-
-[Next: Getting Started](02-getting-started.md)
