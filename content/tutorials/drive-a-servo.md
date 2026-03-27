@@ -180,7 +180,3 @@ The REPL reads like English: `left`, `center`, `right`. Redefine the angles to f
 - **Input-to-output mapping:** `read-angle` scales ADC counts to degrees. The same scaling pattern works any time you connect a sensor to an actuator.
 - **Named presets with `def`:** give positions meaningful names. The REPL becomes a command vocabulary for your hardware.
 - **Live redefinition:** change `patrol` behavior by redefining the word. The servo responds immediately.
-
----
-
-[← Fade an LED](fade-an-led.md) | [Next: Build a Calculator →](build-a-calculator.md)
