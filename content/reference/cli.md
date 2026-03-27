@@ -3,117 +3,127 @@ title: "CLI Reference"
 weight: 3
 ---
 
-The Froth CLI (`froth`) manages board connections, firmware builds, code deployment, and the background daemon that bridges the VSCode extension to connected hardware.
+This reference is based on the current Go CLI implementation in `tools/cli/` in the main Froth repo.
 
-**Installation:** Distributed as a single binary. Once on `PATH`, all subcommands are available from any directory.
+The repo-local build currently produces a binary named `froth-cli` (`cd tools/cli && make build`). The usage strings in the code say `froth`. In practice:
 
-**Global flags** (accepted by all subcommands):
+- use `froth` if you have installed or renamed the binary that way
+- use `tools/cli/froth-cli` if you are running it directly from the repo
 
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port to use. Overrides auto-detection. |
-| `--baud <rate>` | Baud rate. Default: 115200. |
-| `--verbose` | Print debug-level output. |
-| `--json` | Emit structured JSON output (useful for tooling integration). |
+Examples below use `froth` for readability.
+
+## Global flags
+
+These flags are parsed before command dispatch:
+
+| Flag | Meaning |
+|------|---------|
+| `--port <path>` | Serial port override. Used by serial/device commands and daemon startup. |
+| `--target <name>` | Target/board name. Used by `new` and legacy `build` / `flash` flows. |
+| `--serial` | For `info`, `send`, and `reset`: force direct serial instead of daemon routing. |
+| `--daemon` | For `info`, `send`, and `reset`: require daemon routing instead of falling back to serial. |
+| `--clean` | For `build`: remove the build directory before building. |
+
+Notably, the current CLI does **not** implement the old docs' `--baud`, `--json`, or `--verbose` global flags.
+
+---
+
+## new
+
+**Syntax:**
+
+```sh
+froth [--target <name>] new <project-dir>
+```
+
+Creates a new Froth project skeleton:
+
+- `froth.toml`
+- `src/main.froth`
+- `lib/.gitkeep`
+- `.gitignore`
+
+Default target is `posix`. If `--target` is set to anything other than `posix`, the scaffold infers platform `esp-idf`.
+
+**Example:**
+
+```sh
+froth new hello-froth
+froth --target esp32-devkit-v1 new blink-demo
+```
+
+---
+
+## info
+
+**Syntax:**
+
+```sh
+froth [--port <path>] [--serial|--daemon] info
+```
+
+Shows device information:
+
+- Froth version
+- board name
+- cell size
+- max payload
+- heap usage
+- slot count
+
+Behavior:
+
+- default: try daemon first, then fall back to direct serial
+- `--daemon`: require daemon routing
+- `--serial`: skip daemon and connect directly
+
+**Example:**
+
+```sh
+froth info
+froth --serial --port /dev/ttyUSB0 info
+froth --daemon info
+```
 
 ---
 
 ## connect
 
 **Syntax:**
+
+```sh
+froth [--port <path>] connect
+froth connect --local
 ```
-froth connect [--port <path>] [--baud <rate>]
-```
 
-Opens an interactive REPL session to a connected board over serial. Input typed in the terminal is sent to the board; output from the board is printed to the terminal.
+Starts an interactive REPL session.
 
-The session continues until the user sends EOF (`Ctrl+D`) or interrupts (`Ctrl+C` twice). A single `Ctrl+C` sends an interrupt signal to the running board program if the board supports it.
+### Default mode
 
-Auto-detects the serial port when `--port` is omitted, scanning known USB-serial vendor IDs (CP2102, CH340, FTDI). If multiple boards are connected, reports the ambiguity and requires `--port`.
+`froth connect` talks to the background daemon and gives you a live REPL prompt. If the daemon is not running, the CLI attempts to start it automatically in the background first.
 
-**Flags:**
+Behavior worth knowing:
 
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port (e.g., `/dev/ttyUSB0`, `COM3`). |
-| `--baud <rate>` | Baud rate override. Default: 115200. |
-| `--no-echo` | Suppress local echo. Use when the board echoes input itself. |
-| `--raw` | Pass bytes without line buffering. For binary protocol use. |
+- blank lines are ignored
+- `\ quit` exits the session cleanly
+- `Ctrl+C` at the prompt just re-prompts
+- `Ctrl+C` during a running eval sends an interrupt through a fresh daemon connection
+
+### Local mode
+
+`froth connect --local` builds or reuses a local POSIX Froth runtime under `$FROTH_HOME/local-build/` and then `exec`s into it.
+
+Constraints:
+
+- `--local` cannot be combined with `--port`
+- local mode requires `cmake` and `make`
 
 **Example:**
+
 ```sh
 froth connect
-froth connect --port /dev/ttyUSB0
-froth connect --port COM3 --baud 9600
-```
-
----
-
-## build
-
-**Syntax:**
-```
-froth build [--board <name>] [--config <path>] [OPTIONS]
-```
-
-Compiles the Froth runtime firmware for a target board. Produces a binary suitable for flashing.
-
-The build system uses CMake internally. The `froth build` command is a convenience wrapper; advanced users can invoke CMake directly. See the build-options reference for the full list of CMake variables.
-
-Output files are placed in `build/<board>/` by default.
-
-**Flags:**
-
-| Flag | Description |
-|------|-------------|
-| `--board <name>` | Target board identifier (e.g., `esp32-devkit`, `rp2040`). Default: `posix`. |
-| `--config <path>` | Path to a CMake cache file or override configuration. |
-| `--clean` | Delete the build directory before building. |
-| `--release` | Build with optimization. Default is debug. |
-| `--cell-size <bits>` | Cell size in bits: 8, 16, 32, or 64. Default: 32. |
-| `--heap-size <bytes>` | Heap size. Default: 4096. |
-| `--no-snapshots` | Build without snapshot support (`FROTH_HAS_SNAPSHOTS=OFF`). |
-| `--no-link` | Build without link layer support (`FROTH_HAS_LINK=OFF`). |
-| `-D <VAR>=<VAL>` | Pass arbitrary CMake variable. Repeatable. |
-
-**Example:**
-```sh
-froth build --board esp32-devkit
-froth build --board rp2040 --release --heap-size 8192
-froth build --board posix --cell-size 64
-froth build -D FROTH_SLOT_TABLE_SIZE=256
-```
-
----
-
-## flash
-
-**Syntax:**
-```
-froth flash [--port <path>] [--board <name>] [--firmware <path>]
-```
-
-Writes a compiled firmware binary to a connected board over USB. Automatically invokes the board's flashing tool (esptool for ESP32, picotool for RP2040, etc.).
-
-If `--firmware` is not specified, flashes the most recently built binary in `build/<board>/`.
-
-The board must be in bootloader mode. The CLI attempts to trigger bootloader mode automatically by toggling the RTS/DTR lines. If the board does not respond, hold the BOOT button before running `flash` (and release after the upload begins).
-
-**Flags:**
-
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port to the board in bootloader mode. |
-| `--board <name>` | Board type, used to select the flashing tool. |
-| `--firmware <path>` | Path to the binary to flash. |
-| `--verify` | Read back and verify after writing. Slower but confirms integrity. |
-| `--erase` | Erase flash before writing. Clears all saved snapshots. |
-
-**Example:**
-```sh
-froth flash
-froth flash --port /dev/ttyUSB0 --board esp32-devkit
-froth flash --firmware build/esp32-devkit/froth.bin --verify
+froth --port /dev/ttyUSB0 connect
+froth connect --local
 ```
 
 ---
@@ -121,33 +131,42 @@ froth flash --firmware build/esp32-devkit/froth.bin --verify
 ## send
 
 **Syntax:**
+
+```sh
+froth [--port <path>] [--serial|--daemon] send
+froth [--port <path>] [--serial|--daemon] send <file>
+froth [--port <path>] [--serial|--daemon] send "<source>"
 ```
-froth send <file> [--port <path>]
-froth send --expr <expression> [--port <path>]
-```
 
-Sends Froth source code to a connected board for immediate compilation and execution. Does not require a full firmware flash. Used for loading word definitions into a running session.
+Sends Froth source for evaluation.
 
-`send <file>` reads a `.froth` source file line by line and sends each line to the board's REPL input channel. The board compiles and executes each line as it arrives.
+The current implementation supports three modes:
 
-`send --expr` sends a single expression string.
+1. `send` with no argument:
+   uses `froth.toml`, resolves the project entry and dependencies, and sends the merged source
+2. `send <file>`:
+   resolves that file in project context if a nearby `froth.toml` exists; otherwise resolves the file bare
+3. `send "<source>"`:
+   sends the string directly as raw source
 
-The command waits for the board to acknowledge each line before sending the next. If the board returns an error, `send` stops and reports the failing line.
+Important current behavior:
 
-**Flags:**
+- project/file sends reset the device before evaluation
+- the CLI appends an autorun invocation tail:
+  `[ 'autorun call ] catch drop drop`
+- default routing is daemon first, then serial fallback
+- `--daemon` requires daemon routing
+- `--serial` forces direct serial
 
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port. |
-| `--expr <string>` | Send a single expression instead of a file. |
-| `--no-wait` | Do not wait for acknowledgment between lines. Faster but suppresses error detection mid-file. |
-| `--timeout <ms>` | Per-line acknowledgment timeout. Default: 5000ms. |
+The current CLI does **not** implement `send --expr`, `--no-wait`, or `--timeout`.
 
 **Example:**
+
 ```sh
-froth send myprogram.froth
-froth send --expr ": blink 500 ms ;"
-froth send myprogram.froth --port /dev/ttyUSB0
+froth send
+froth send src/main.froth
+froth send "1 2 +"
+froth --serial --port /dev/ttyUSB0 send "5 dup +"
 ```
 
 ---
@@ -155,27 +174,113 @@ froth send myprogram.froth --port /dev/ttyUSB0
 ## reset
 
 **Syntax:**
+
+```sh
+froth [--port <path>] [--serial|--daemon] reset
 ```
-froth reset [--port <path>] [--safe]
-```
 
-Resets a connected board. By default, performs a normal reset: the board reboots, restores the saved snapshot (if any), runs `autorun`, and starts the REPL.
+Resets the target to the stdlib baseline and prints:
 
-`--safe` holds the BOOT signal high during reset, triggering safe boot: the snapshot restore and `autorun` hook are skipped. The board starts with only the stdlib and board library. Use this to recover from a broken `autorun` without physical access to the board.
+- reset status
+- heap usage
+- slot count
 
-**Flags:**
+Routing behavior matches `info` and `send`:
 
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port. |
-| `--safe` | Trigger safe boot (skip snapshot and autorun). |
-| `--hard` | Assert the hardware reset pin rather than sending a soft-reset command. |
+- default: daemon first, then serial fallback
+- `--daemon`: daemon only
+- `--serial`: serial only
+
+The current CLI does **not** implement `reset --safe` or `reset --hard`.
 
 **Example:**
+
 ```sh
 froth reset
-froth reset --safe
-froth reset --port /dev/ttyUSB0 --hard
+froth --daemon reset
+froth --serial --port /dev/ttyUSB0 reset
+```
+
+---
+
+## build
+
+**Syntax:**
+
+```sh
+froth [--clean] build
+froth [--target <name>] [--clean] build
+```
+
+Build behavior depends on context.
+
+### Manifest-driven build
+
+If run inside a Froth project with `froth.toml`, `build`:
+
+1. resolves includes and dependencies
+2. writes merged source to `.froth-build/resolved.froth`
+3. builds based on `[target]`
+
+Current platforms:
+
+- `posix`: builds into `.froth-build/firmware/Froth`
+- `esp-idf`: stages into `.froth-build/esp-idf/` and runs `idf.py build`
+
+### Legacy build
+
+If no `froth.toml` is found but the current directory is inside the kernel repo, `build` falls back to the legacy kernel build:
+
+- default / `--target posix`: builds `build64/Froth`
+- `--target esp-idf`: builds `targets/esp-idf/`
+
+`--clean` deletes `.froth-build/` (manifest mode) or `build64/` (legacy POSIX mode) before building.
+
+The current CLI does **not** implement `--board`, `--config`, `--release`, `--cell-size`, `--heap-size`, `--no-snapshots`, `--no-link`, or arbitrary `-D` forwarding as top-level CLI flags. Manifest builds do pass CMake args from `froth.toml`.
+
+**Example:**
+
+```sh
+froth build
+froth --clean build
+froth --target esp-idf build
+```
+
+---
+
+## flash
+
+**Syntax:**
+
+```sh
+froth [--port <path>] flash
+froth [--target <name>] [--port <path>] flash
+```
+
+Like `build`, `flash` has manifest and legacy modes.
+
+### Manifest mode
+
+Inside a Froth project, `flash` first runs the manifest build.
+
+- `posix`: no flash step; prints the built binary path
+- `esp-idf`: auto-detects a `/dev/...` serial port if possible, then runs `idf.py flash -p <port>`
+
+### Legacy mode
+
+Inside the kernel repo without a project manifest:
+
+- default / `--target posix`: no flash step; prints `build64/Froth`
+- `--target esp-idf`: flashes `targets/esp-idf/`
+
+The current CLI does **not** implement `--firmware`, `--verify`, or `--erase`.
+
+**Example:**
+
+```sh
+froth flash
+froth --port /dev/ttyUSB0 flash
+froth --target esp-idf flash
 ```
 
 ---
@@ -183,72 +288,97 @@ froth reset --port /dev/ttyUSB0 --hard
 ## daemon
 
 **Syntax:**
+
+```sh
+froth daemon start [--background] [--local] [--local-runtime <path>]
+froth daemon stop [--pid <n>]
+froth daemon status
 ```
-froth daemon [start|stop|status|restart] [--port <path>]
-```
 
-Manages the Froth daemon process. The daemon runs in the background and provides the serial connection that the VSCode extension uses. It exposes a local socket interface that the extension connects to; this allows the extension to send code, read output, and manage snapshots without holding the serial port exclusively.
+Manages the background daemon used by the CLI and VSCode tooling.
 
-When the daemon is running, `froth connect` connects through the daemon rather than directly, so both a terminal REPL session and the VSCode extension can be active simultaneously.
+### `daemon start`
 
-**Subcommands:**
+Starts the daemon in serial mode by default. With `--background`, prints the child PID once ready.
 
-| Subcommand | Description |
-|------------|-------------|
-| `start` | Start the daemon. Auto-detects a connected board if `--port` is not given. |
-| `stop` | Stop the daemon. Releases the serial port. |
-| `status` | Print current daemon state: running, port, uptime, connected clients. |
-| `restart` | Stop then start. |
+Optional flags:
 
-**Flags:**
+- `--background`: detach and run in background
+- `--local`: run the daemon against a local runtime instead of a serial device
+- `--local-runtime <path>`: explicit runtime path; requires `--local`
 
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port to manage. |
-| `--socket <path>` | Unix socket path (POSIX) or named pipe (Windows). Default: `~/.froth/daemon.sock`. |
+Constraints:
+
+- `--local` cannot be combined with `--port`
+- `--local-runtime` requires `--local`
+
+### `daemon stop`
+
+Stops the running daemon. `--pid` is a guard: if the daemon PID has changed, stop is skipped instead of killing the wrong process.
+
+### `daemon status`
+
+Prints:
+
+- daemon running/not running
+- PID
+- daemon version / API version
+- target
+- current device or reconnecting state
+- port if known
+
+The current CLI does **not** implement `daemon restart` or `--socket`.
 
 **Example:**
+
 ```sh
-froth daemon start
-froth daemon start --port /dev/ttyUSB0
+froth daemon start --background
+froth --port /dev/ttyUSB0 daemon start --background
+froth daemon start --background --local
 froth daemon status
 froth daemon stop
 ```
-
-The VSCode extension starts and stops the daemon automatically when a board is connected or disconnected. Manual daemon management is useful for CI pipelines and terminal-only workflows.
 
 ---
 
 ## doctor
 
 **Syntax:**
+
+```sh
+froth [--port <path>] doctor
 ```
-froth doctor [--port <path>]
-```
 
-Diagnostic tool. Checks the local environment and (optionally) a connected board for common problems.
+Checks the local environment and, if possible, the current project and connected device.
 
-**Checks performed:**
+Current checks include:
 
-- CLI binary version and available update notice.
-- Serial port permissions (checks that the user is in the `dialout` or `uucp` group on Linux).
-- Available USB-serial devices: lists detected ports and their vendor/product IDs.
-- Board communication test (if `--port` is provided or a board is auto-detected): sends a probe command and verifies the response matches a known Froth firmware signature.
-- Firmware version on connected board vs. latest available build.
-- Daemon status.
+- Go runtime version
+- `cmake` on `PATH`
+- `make` on `PATH`
+- detected USB serial ports
+- ESP-IDF export script under `$FROTH_HOME/sdk/esp-idf/export.sh`
+- project manifest, entry file, dependencies, and board directory
+- device reachability and device info
 
-**Flags:**
+`doctor` prints remediation hints inline when something is missing.
 
-| Flag | Description |
-|------|-------------|
-| `--port <path>` | Serial port to test. |
-| `--json` | Output results as JSON for integration with IDE diagnostics. |
+The current CLI does **not** implement JSON output.
 
 **Example:**
+
 ```sh
 froth doctor
-froth doctor --port /dev/ttyUSB0
-froth doctor --json
+froth --port /dev/ttyUSB0 doctor
 ```
 
-Exit code is 0 if all checks pass, 1 if any check fails.
+---
+
+## Current mismatches from the old docs
+
+The previous reference page was out of date in a few important ways:
+
+- it documented unsupported global flags such as `--baud`, `--json`, and `--verbose`
+- it documented unsupported command flags such as `send --expr`, `reset --safe`, and `flash --firmware`
+- it omitted real commands such as `new` and `info`
+- it described the build/flash flow as generic board wrappers, while the implementation is now primarily manifest-driven with `.froth-build/`
