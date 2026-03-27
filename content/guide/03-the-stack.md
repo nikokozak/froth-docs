@@ -247,5 +247,3 @@ What does `.s` display? What does `.` print? What's on the stack at the end?
 If you got some wrong, that's expected. Run each expression in the REPL and trace through what happened. The REPL is the answer key, and using it is the point.
 
 You can now predict the stack state after any sequence of numbers and arithmetic. The next chapter introduces word definitions, where you'll start naming your own operations and building a vocabulary.
-
-[Previous: Getting Started](02-getting-started.md) | [Next: Words and Definitions](04-words-and-definitions.md)
