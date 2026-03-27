@@ -161,7 +161,3 @@ Turn the potentiometer. The LED tracks your hand in real time. Analog input driv
 - **Counted loops with `while`:** `fade-up` and `fade-down` use a counter on the stack and a comparison as the loop condition.
 - **Live parameter tuning:** change the step delay or redefine `breathe` at the REPL to adjust behavior without any build step.
 - **Input-to-output mapping:** scaling an ADC reading to a PWM range connects the physical world (a knob) to a visible output (LED brightness).
-
----
-
-[← Read a Sensor](read-a-sensor.md) | [Next: Drive a Servo →](drive-a-servo.md)
