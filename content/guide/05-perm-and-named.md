@@ -212,5 +212,3 @@ Labels: `a` = 5, `b` = 3. Pattern `[a b a]`: push 5, 3, 5. Stack: `[5 3 5]`.
 ```
 
 Your Named version should be shorter and should read like the formula it computes.
-
-[Previous: Words and Definitions](04-words-and-definitions.md) | [Next: Quotations and Control Flow](06-quotations-and-control.md)
