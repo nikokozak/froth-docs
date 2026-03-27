@@ -3,179 +3,210 @@ title: "VSCode Extension Reference"
 weight: 4
 ---
 
-The Froth VSCode extension integrates the Froth development workflow into the editor: connecting to boards, sending code, managing snapshots, and maintaining the daemon that bridges serial communication.
+The Froth VSCode extension is a thin front end over the Froth CLI and daemon. It gives you editor syntax support, device and local-target connection commands, send commands, a small device sidebar, and a live console.
 
-**Extension ID:** `froth-lang.froth` (install from the VSCode Marketplace or from the `.vsix` package in the Froth release archive).
-
----
+**Extension ID:** `froth.froth`
 
 ## Installation
 
-1. Open VSCode.
-2. Open the Extensions panel (`Cmd+Shift+X` / `Ctrl+Shift+X`).
-3. Search for `froth-lang.froth`.
-4. Click **Install**.
+The extension manifest identifies the extension as `froth.froth`.
 
-Alternatively, install from a `.vsix` file:
+If you have a packaged `.vsix`, install it with:
+
 ```sh
-code --install-extension froth-lang-x.y.z.vsix
+code --install-extension froth-0.0.2.vsix
 ```
 
-The extension activates automatically when a `.froth` file is opened or when a Froth-capable device is detected on a USB serial port.
+The extension activates on VSCode startup, not only when you open a `.froth` file.
 
----
+## What It Provides
 
-## Connecting to a Device
+- Froth language registration for `.froth` files
+- TextMate syntax highlighting for Froth source
+- Commands for connecting to a serial device or a local POSIX target
+- Send-selection and send-file workflows
+- Status bar state for the active target
+- A small sidebar with live target info
+- A console pane showing target output and command results
 
-When a supported board is connected over USB, the extension detects it within a few seconds and shows the device name in the status bar (bottom-left, e.g., `Froth: ESP32 DevKit — /dev/ttyUSB0`).
+## CLI Requirement
 
-**Auto-connection:** The extension starts the daemon (`froth daemon start`) automatically and connects through it. No manual port selection is required when only one board is connected.
+The extension depends on the Froth CLI.
 
-**Manual port selection:** If multiple boards are connected, or if auto-detection fails:
-1. Open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`).
-2. Run **Froth: Select Port**.
-3. Choose from the list of detected serial devices.
+By default it looks for `froth` on `PATH`. If it cannot find it, commands fail with a prompt telling you to install `froth` or set `froth.cliPath`.
 
-**Connection status indicators:**
+## Commands
 
-| Status bar text | Meaning |
-|-----------------|---------|
-| `Froth: Disconnected` | No board detected or daemon not running. |
-| `Froth: Connecting…` | Daemon starting or waiting for board handshake. |
-| `Froth: ESP32 DevKit` | Board connected and ready. |
-| `Froth: Error` | Connection failed; click for details. |
+These are the commands actually contributed by the current extension:
 
----
+| Command Palette entry | What it does |
+|---|---|
+| `Froth: Connect Device` | Starts or reuses a daemon in serial mode and refreshes target info. |
+| `Froth: Try Local POSIX` | Starts or reuses a daemon in local mode and connects to the POSIX runtime. |
+| `Froth: Run Doctor` | Opens a terminal and runs `froth doctor`. |
+| `Froth: Send Selection / Line` | Sends the current selection, or the current line if nothing is selected. |
+| `Froth: Send File (Reset + Eval)` | Saves the active file if needed, then runs `froth --daemon send <file>`. |
+| `Froth: Interrupt` | Sends an interrupt to the active target. |
+| `Froth: Reset to Baseline` | Resets the active target. |
+| `Froth: Save Snapshot` | Evaluates `save` on the active target. |
+| `Froth: Wipe Snapshots` | Evaluates `wipe` on the active target. |
+| `Froth: Refresh Device Info` | Refreshes daemon status and the sidebar view. |
 
-## Try Local Mode
+Notably absent from the current extension:
 
-Try Local mode runs a POSIX Froth binary on the development machine. No physical board is required. Code execution is local; GPIO and hardware words are no-ops.
+- no `Select Port` command
+- no `Restore Snapshot` command
+- no `Safe Reset` command
+- no explicit `Start Daemon` or `Stop Daemon` command
 
-**Activate Try Local mode:**
-1. Open the Command Palette.
-2. Run **Froth: Try Local**.
+## Connecting to a Target
 
-The status bar changes to `Froth: Local`. All send, snapshot, and REPL commands work exactly as on hardware, with the exception that hardware-specific words produce no physical effect.
+### Serial Device
 
-**Use cases:**
-- Learning the language without hardware.
-- Testing word definitions before deploying.
-- CI pipelines that need to verify Froth logic.
+Use **Froth: Connect Device**.
 
-Try Local mode requires the `froth` CLI binary to be on `PATH`. If it is not found, the extension prompts to install it.
+The extension ensures a Froth daemon is running in serial mode, connects through the daemon socket, and then requests target info. If the daemon is running but no board is attached, VSCode shows a warning that no device is connected.
 
----
+There is no manual port picker in the current extension UI. Port selection and discovery are handled by the CLI and daemon layer.
+
+### Local POSIX
+
+Use **Froth: Try Local POSIX**.
+
+This runs the daemon in local mode and connects the extension to a local POSIX Froth runtime instead of physical hardware.
+
+If `froth.localRuntimePath` is set, the daemon is started with that runtime path. Otherwise the CLI decides what local runtime to use.
 
 ## Sending Code
 
-### Send Selection
+### Send Selection / Line
 
-**Shortcut:** `Cmd+Enter` (macOS) / `Ctrl+Enter` (Windows/Linux)
+**Shortcut:** `Cmd+Enter` on macOS, `Ctrl+Enter` on Windows and Linux
 
-Sends the current text selection to the connected board. If no text is selected, sends the current line.
+If text is selected, the extension sends exactly that selection. If nothing is selected, it sends the current line.
 
-The selected text is transmitted to the board's REPL input exactly as written. The board compiles and executes it. Output appears in the **Froth Output** panel.
-
-Typical use: define a word at the cursor, press `Cmd+Enter`, test it immediately.
+The command goes through the daemon's `eval` RPC, not through a line-by-line file transfer. The extension logs a short preview to the console first, then prints the resulting stack representation or error.
 
 ### Send File
 
-**Shortcut:** `Cmd+Shift+Enter` (macOS) / `Ctrl+Shift+Enter` (Windows/Linux)
-**Also via:** Command Palette → **Froth: Send File**
+**Shortcut:** `Cmd+Shift+Enter` on macOS, `Ctrl+Shift+Enter` on Windows and Linux
 
-Sends the entire active `.froth` file to the board. The file is sent line by line; the extension waits for acknowledgment from the board after each line before sending the next.
+Send File works differently from Send Selection:
 
-If the board returns an error, the send stops, the failing line is highlighted in the editor, and the error message appears in the **Froth Output** panel.
+- the active document must be a real file on disk
+- if the file is dirty, the extension saves it first
+- the extension then runs `froth --daemon send <file>`
+- CLI stdout and stderr are streamed into the Froth console with a `[froth-cli]` prefix
 
-### Output Panel
+If the CLI exits non-zero, the extension shows an error telling you to inspect the console.
 
-The **Froth Output** panel (`View → Output → Froth`) shows:
-- All output from the board (printed values, error messages, REPL prompts).
-- Transmission log: each line sent and the board's acknowledgment or error response.
-- Extension status messages (daemon start/stop, connection events).
+## Console and Input
 
----
+The output channel is named **Froth Console**.
 
-## Device Sidebar
+It shows:
 
-The **Froth** sidebar panel (click the Froth icon in the Activity Bar) provides:
+- target console output
+- previews of evaluated snippets, prefixed with `>`
+- stack results or errors after `eval`
+- daemon connection events such as connect, disconnect, and reconnect
+- CLI output from Send File, prefixed with `[froth-cli]`
 
-### Connected Device
+If the target requests input, the extension opens a VSCode input box. It accepts raw text and escapes like `\n`, `\r`, `\t`, `\\`, and `\x41`. Cancelling the prompt sends an interrupt.
 
-Displays the board name, port, firmware version, and connection status. A **Disconnect** button and a **Safe Reset** button are available here.
+## Sidebar
 
-### Snapshot Panel
+The Froth activity-bar view currently exposes a single **Device** tree view.
 
-Shows the current snapshot state:
-- **Last saved:** timestamp of the most recent `save`.
-- **Snapshot size:** bytes written to flash.
-- **Actions:** Save, Restore, Wipe buttons that send the corresponding words to the board.
+When connected, it shows these fields:
 
-### Word List
+- `Target`
+- `Board`
+- `Port`
+- `Heap`
+- `Slots`
+- `Cell Bits`
 
-A live list of all words defined in the current session. Updated after each successful `send`. Clicking a word name opens a hover card showing the word's stack-effect comment and definition (equivalent to `see wordname` at the REPL).
+The title bar for that view exposes commands for:
 
-### Board Info
+- connect device
+- try local
+- interrupt
+- refresh device info
+- reset to baseline
+- save snapshot
+- wipe snapshots
+- run doctor
 
-Displays the output of `info` from the board: heap usage, slot count, stack depth, cell size, enabled profiles. Refreshed on demand via a **Refresh** button.
+The sidebar does not currently provide:
 
----
+- a disconnect button
+- a restore button
+- a live word list
+- a definition browser
+- a dedicated snapshot history panel
 
-## Snapshot Commands
+## Status Bar
 
-All snapshot commands are available from:
-- The Froth sidebar (Snapshot Panel).
-- The Command Palette (`Cmd+Shift+P`).
-- Right-clicking in an open `.froth` file.
+The extension uses a Froth status item plus a separate interrupt item when the target is running.
 
-| Command | What it does |
-|---------|-------------|
-| **Froth: Save Snapshot** | Sends `save` to the board. Writes current heap and slot table to flash. |
-| **Froth: Restore Snapshot** | Sends `restore`. Reloads the board's session from flash. |
-| **Froth: Wipe Snapshots** | Sends `wipe`. Clears all saved snapshots; next boot starts clean. |
+These are the actual status texts used by the current code:
 
----
+| Status bar text | Meaning |
+|---|---|
+| `Froth: Idle` | Nothing connected yet. |
+| `Froth: Running` | A program is running on the current target. |
+| `Froth: Local POSIX` | Connected to the local POSIX target. |
+| `Froth: <board name>` | Connected to a serial device. |
+| `Froth: Reconnecting` | The daemon is trying to reconnect. |
+| `Froth: Local Offline` | Local mode is selected but unavailable. |
+| `Froth: No Device` | The daemon is running but no serial device is connected. |
+| `Froth: No Daemon` | No daemon is reachable. |
 
-## Keyboard Shortcuts
+When the target is running, a second status item appears with **Interrupt**.
 
-| Shortcut (macOS) | Shortcut (Windows/Linux) | Action |
-|-------------------|--------------------------|--------|
-| `Cmd+Enter` | `Ctrl+Enter` | Send selection (or current line) to board. |
-| `Cmd+Shift+Enter` | `Ctrl+Shift+Enter` | Send entire active file to board. |
-| `Cmd+Shift+P` → **Froth: Save Snapshot** | `Ctrl+Shift+P` → **Froth: Save Snapshot** | Save snapshot. |
-| `Cmd+Shift+P` → **Froth: Reset Board** | `Ctrl+Shift+P` → **Froth: Reset Board** | Soft-reset the board. |
-| `Cmd+Shift+P` → **Froth: Safe Reset** | `Ctrl+Shift+P` → **Froth: Safe Reset** | Reset into safe boot (skips snapshot and autorun). |
+## Daemon Behavior
 
-Shortcuts can be remapped in **Preferences → Keyboard Shortcuts** (`Cmd+K Cmd+S`). Search for `froth` to see all Froth bindings.
+The extension manages the daemon for you.
 
----
+- It uses the daemon socket at `~/.froth/daemon.sock`
+- serial mode is used for hardware targets
+- local mode is used for Try Local POSIX
+- the extension starts the daemon with `froth daemon start --background`
+- in local mode it adds `--local` and, if configured, `--local-runtime <path>`
 
-## Daemon Lifecycle
-
-The Froth daemon is a background process that holds the serial port and multiplexes access between the VSCode extension and terminal sessions.
-
-**Automatic management:** The extension starts the daemon when a board is first detected and stops it when VSCode closes. No manual action is needed.
-
-**Manual management:** Use the **Froth: Start Daemon** and **Froth: Stop Daemon** commands in the Command Palette, or use the CLI (`froth daemon start` / `froth daemon stop`).
-
-**Terminal REPL alongside the extension:** When the daemon is running, `froth connect` in a terminal connects through the daemon's socket rather than directly to the serial port. Both the extension and the terminal session see the same board output and can send input concurrently.
-
-**Daemon log:** Accessible at **View → Output → Froth Daemon**. Shows serial traffic, client connections, and error messages from the daemon process. Useful when diagnosing connection problems.
-
-**Socket location:** `~/.froth/daemon.sock` (POSIX) or `\.\piperoth-daemon` (Windows). The location can be overridden with `froth daemon start --socket <path>` and must match the setting in VSCode preferences (`froth.daemonSocket`).
-
----
+There is no user-facing setting in the extension for overriding the daemon socket path.
 
 ## Settings
 
-All settings are under the `froth` namespace in VSCode preferences.
+The current extension contributes only two settings:
 
 | Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `froth.port` | string | `""` | Serial port override. Empty = auto-detect. |
-| `froth.baudRate` | number | `115200` | Baud rate for serial communication. |
-| `froth.daemonSocket` | string | `""` | Custom daemon socket path. Empty = default. |
-| `froth.sendTimeout` | number | `5000` | Per-line acknowledgment timeout (ms) for file send. |
-| `froth.localBinary` | string | `"froth"` | Path to the Froth CLI binary for Try Local mode. |
-| `froth.autoStartDaemon` | boolean | `true` | Start daemon automatically on board detection. |
-| `froth.showOutputOnSend` | boolean | `true` | Bring the Froth Output panel to focus when sending code. |
+|---|---|---|---|
+| `froth.cliPath` | string | `""` | Absolute path to the Froth CLI binary. |
+| `froth.localRuntimePath` | string | `""` | Absolute path to the local POSIX Froth runtime used by Try Local. |
+
+If `froth.cliPath` is empty, the implementation currently searches only for `froth` on `PATH`.
+
+## Doctor
+
+**Froth: Run Doctor** opens a terminal named **Froth Doctor** and runs:
+
+```sh
+froth doctor
+```
+
+Use this first when the extension cannot find the CLI, cannot start the daemon, or cannot connect to a board.
+
+## Current Limits
+
+If you are comparing this page with older drafts, the current extension is simpler than those drafts suggested.
+
+In particular, the shipped implementation does not currently include:
+
+- manual serial port selection
+- restore snapshot support
+- safe reset support
+- daemon start/stop palette commands
+- extra connection settings such as baud rate, socket path, timeout, or output-panel behavior toggles
+- a richer device sidebar with word browsing or snapshot metadata
