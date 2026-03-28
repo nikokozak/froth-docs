@@ -9,7 +9,7 @@
   </div>
 
   {{ $pages := .Pages.ByWeight }}
-  {{ if eq .Section "guide" }}
+  {{ if or (eq .Section "guide") (eq .Section "tutorials") }}
   {{ $mainPages := where $pages "Params.advanced" "!=" true }}
   {{ $advancedPages := where $pages "Params.advanced" true }}
 

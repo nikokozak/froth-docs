@@ -5,7 +5,7 @@ weight: 11
 
 You have a working vocabulary, a board that runs your code at boot, and a REPL you can reconnect to at any time. The core guide is done.
 
-If you want to keep going, the advanced section starts with [FFI and C Integration](/guide/12-ffi-and-c/) and continues with two Posix Froth Advent of Code case studies. If you would rather branch out, here is where to find everything else.
+If you want to keep going, the advanced section starts with [FFI and C Integration](/guide/12-ffi-and-c/). The Advent of Code case studies now live under [Tutorials](/tutorials/), where they fit better as full worked examples. If you would rather branch out, here is where to find everything else.
 
 ## Reference
 
@@ -21,6 +21,7 @@ The [tutorials](/tutorials/) are project-based and go deeper than the guide exam
 - [Blink an LED](/tutorials/blink-an-led/) walks through GPIO output, timing, counted loops, and standalone deployment with `autorun`.
 - [Read a Sensor](/tutorials/read-a-sensor/) reads analog input, converts ADC counts to millivolts, and adds a threshold alert.
 - [Interactive Workflow](/tutorials/interactive-workflow/) walks through the full develop-save-deploy cycle, including recovery from mistakes at each stage.
+- The `Advanced` block in Tutorials includes the Posix Froth Advent of Code walkthroughs when you want longer-form software examples.
 
 ## Features and design
 

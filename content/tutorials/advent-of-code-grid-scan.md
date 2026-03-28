@@ -1,8 +1,10 @@
 ---
 title: "Advent of Code: Grid Scan"
-weight: 14
+weight: 9
 advanced: true
 description: "Solve Advent of Code 2025 Day 4 on the local POSIX target with explicit neighbor checks and nested recursive loops."
+aliases:
+  - /guide/14-advent-of-code-grid-scan/
 ---
 
 _This chapter uses Posix Froth to solve the first part of [Advent of Code 2025 Day 4: Printing Department](https://adventofcode.com/2025/day/4). It is a different kind of exercise from the safe dial problem: the input is a 2D grid, the work is local neighborhood counting, and the solution wants nested walkers rather than a single line parser._
