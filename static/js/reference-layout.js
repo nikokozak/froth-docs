@@ -281,27 +281,6 @@
     var shell = createNode("div", "words-browser-shell");
     browser.appendChild(shell);
 
-    var header = createNode("div", "words-browser-header");
-    shell.appendChild(header);
-
-    var intro = createNode("div", "words-browser-intro");
-    header.appendChild(intro);
-
-    intro.appendChild(createNode("p", "words-browser-kicker", "Browse the vocabulary"));
-    intro.appendChild(createNode("h2", "words-browser-title", "Find words by category before you dive into the full entries"));
-    intro.appendChild(
-      createNode(
-        "p",
-        "words-browser-copy",
-        "This page-level browser groups the core language and stdlib by section, shows a short description beside each word, and jumps straight to the full entry below."
-      )
-    );
-
-    var metrics = createNode("div", "words-browser-metrics");
-    header.appendChild(metrics);
-    metrics.appendChild(createNode("span", "words-browser-metric", pluralize(entries.length, "word")));
-    metrics.appendChild(createNode("span", "words-browser-metric", pluralize(sections.length, "section")));
-
     var toolbar = createNode("div", "words-browser-toolbar");
     shell.appendChild(toolbar);
 
