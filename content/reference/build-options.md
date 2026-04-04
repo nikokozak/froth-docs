@@ -1,200 +1,282 @@
 ---
 title: "Build Options Reference"
-weight: 5
+weight: 7
 ---
 
-Froth firmware is built with CMake. Configuration variables control board target, cell size, stack capacities, heap size, and optional subsystems. Pass them with `-D` on the CMake command line or through the `froth build -D` shorthand.
+This page describes the build surface in the Froth repo.
+
+For normal project work, prefer `froth.toml`. For kernel, board, or tooling work, the underlying CMake variables are still the authoritative layer.
+
+## The Two Configuration Surfaces
+
+### Project manifests
+
+Inside a Froth project, `froth build` and `froth flash` read `froth.toml`.
+
+The important sections are:
+
+- `[target]` for board and platform
+- `[build]` for VM sizing and related compile-time limits
+- `[ffi]` for project-local C bindings
+- `[dependencies]` for named Froth source includes
+
+### Direct CMake
+
+When you are building the kernel directly, or when you want to understand what the CLI is passing through, the underlying CMake cache variables are the real source of truth.
+
+Example:
 
 ```sh
-cmake -DFROTH_BOARD=esp32-devkit -DFROTH_CELL_SIZE_BITS=32 ..
-# or equivalently:
-froth build --board esp32-devkit --cell-size 32
+cmake -DFROTH_BOARD=posix -DFROTH_PLATFORM=posix -DFROTH_DATA_SPACE_SIZE=512 ..
+make
 ```
 
-All variables have defaults; an unconfigured build targets the POSIX local runner with 32-bit cells and a 4 KB heap.
+## `froth.toml` Build Keys
 
----
+The Go CLI maps the `[build]` section to CMake variables.
 
-## FROTH_BOARD
+```toml
+[build]
+cell_size = 32
+heap_size = 8192
+slot_table_size = 256
+line_buffer_size = 2048
+tbuf_size = 2048
+tdesc_max = 64
+ffi_max_tables = 12
+```
 
-| Property | Value |
-|----------|-------|
-| **Type** | String |
-| **Default** | `posix` |
-| **CMake variable** | `FROTH_BOARD` |
-| **CLI flag** | `--board <name>` |
+| Manifest key | CMake variable | Meaning |
+|---|---|---|
+| `cell_size` | `FROTH_CELL_SIZE_BITS` | Cell width in bits: `8`, `16`, `32`, or `64`. |
+| `heap_size` | `FROTH_HEAP_SIZE` | Heap size in bytes. |
+| `slot_table_size` | `FROTH_SLOT_TABLE_SIZE` | Maximum number of slots. |
+| `line_buffer_size` | `FROTH_LINE_BUFFER_SIZE` | REPL input buffer size in bytes. |
+| `tbuf_size` | `FROTH_TBUF_SIZE` | Transient string scratch-ring size in bytes. |
+| `tdesc_max` | `FROTH_TDESC_MAX` | Maximum concurrent transient string descriptors. |
+| `ffi_max_tables` | `FROTH_FFI_MAX_TABLES` | Maximum number of registered FFI tables. |
 
-Selects the target board. The board name is matched against entries in the `boards/` directory of the Froth source tree. Each board entry provides a `board.json` (pin map and peripheral descriptors) and a `CMakeLists.txt` fragment that sets the toolchain, flash command, and linker script.
+The CLI does not expose top-level flags such as `--cell-size` or `--heap-size`. Manifest builds are the supported project-level way to set these values.
 
-Built-in boards:
+## `froth.toml` FFI Keys
 
-| Name | Description |
-|------|-------------|
-| `posix` | Local POSIX runner. No hardware required. GPIO is a no-op. |
-| `esp32-devkit` | ESP32 DevKit v1 (38-pin). Xtensa LX6. Flashed with esptool. |
-| `esp32-s3` | ESP32-S3. Xtensa LX7. |
-| `rp2040` | Raspberry Pi RP2040. ARM Cortex-M0+. Flashed with picotool. |
+Project-local FFI is part of the normal build path.
 
-Custom boards: create a directory under `boards/`, provide `board.json` and the CMake fragment, then set `FROTH_BOARD` to the directory name.
+```toml
+[ffi]
+sources = ["src/ffi/bindings.c"]
+includes = ["src/ffi"]
+defines = { SENSOR_SCALE = "42" }
+```
 
----
+| Key | Meaning |
+|---|---|
+| `sources` | Project-local `.c` files compiled into the firmware. |
+| `includes` | Include directories added to the compiler search path. |
+| `defines` | Extra preprocessor defines passed to the project FFI build. |
 
-## FROTH_PLATFORM
+Validation rules:
 
-| Property | Value |
-|----------|-------|
-| **Type** | String |
-| **Default** | `posix` |
-| **CMake variable** | `FROTH_PLATFORM` |
+- `sources` must exist, must be `.c` files, and must remain under the project root
+- `includes` must exist, must be directories, and must remain under the project root
+- define keys must be valid C identifiers
+- define values cannot contain newlines, quotes, or semicolons
 
-Selects the platform abstraction layer. The platform layer provides OS or RTOS primitives: memory allocation, serial I/O, timer access, and interrupt management.
+For the full build and boot pipeline, see [Project FFI](/reference/ffi/project-ffi/).
 
-Available platforms:
+## Board And Platform Selection
 
-| Name | Description |
-|------|-------------|
-| `posix` | Standard POSIX (Linux, macOS). Uses `malloc`, `read`/`write` on `stdin`/`stdout`, `nanosleep`. |
-| `esp-idf` | Espressif ESP-IDF. Used automatically when `FROTH_BOARD` is an ESP32 variant. |
-| `pico-sdk` | Raspberry Pi Pico SDK. Used automatically when `FROTH_BOARD=rp2040`. |
-| `bare-metal` | Minimal platform with no OS. Requires manual implementation of five platform hooks. |
+At the kernel/CMake layer, the build still starts with a board and a platform.
 
-In most cases, setting `FROTH_BOARD` selects the correct platform automatically. Override with `FROTH_PLATFORM` only when building a custom board that shares a platform with an existing one.
-
----
-
-## FROTH_CELL_SIZE_BITS
-
-| Property | Value |
-|----------|-------|
-| **Type** | Integer (enum) |
-| **Default** | `32` |
-| **Valid values** | `8`, `16`, `32`, `64` |
-| **CMake variable** | `FROTH_CELL_SIZE_BITS` |
-| **CLI flag** | `--cell-size <bits>` |
-
-The size of a Froth cell in bits. A cell is the native stack unit: integers, addresses, and quotation handles all occupy one cell.
-
-**8-bit cells:** For extremely constrained targets (AVR, small PIC). Maximum stack value is 255 (unsigned) or ±127 (signed). String and heap addresses are 8-bit; addressable heap is 256 bytes maximum. Rarely appropriate.
-
-**16-bit cells:** For targets with 4–16 KB of RAM (e.g., ATmega, PIC16). Maximum integer value is 65535. Heap addresses are 16-bit; addressable space up to 64 KB. Common on hobbyist embedded targets.
-
-**32-bit cells:** Default. Suitable for ESP32, RP2040, STM32, and most Cortex-M series. Balances range against memory footprint.
-
-**64-bit cells:** For 64-bit POSIX targets or high-precision integer work. Doubles the stack frame size; not useful on typical microcontrollers.
-
-Cell size affects the binary representation of all values, the stack frame layout, and the heap pointer width. All components (core, stdlib, board library, and user code) must be built with the same cell size.
-
----
-
-## FROTH_DS_CAPACITY
+### `FROTH_BOARD`
 
 | Property | Value |
-|----------|-------|
-| **Type** | Integer |
-| **Default** | `256` |
-| **CMake variable** | `FROTH_DS_CAPACITY` |
+|---|---|
+| Type | string |
+| Default | `posix` |
 
-Number of cells reserved for the data stack. The data stack is a fixed-size array allocated at compile time; there is no dynamic growth. Stack overflow throws error -4.
+Built-in boards in the repo:
 
-Each cell occupies `FROTH_CELL_SIZE_BITS / 8` bytes. At the default (256 cells, 32-bit), the data stack occupies 1024 bytes.
+- `posix`
+- `esp32-devkit-v1`
 
-**Reducing:** On targets with very limited RAM, reducing to 32 or 64 cells is reasonable. Most Froth programs keep fewer than 16 values on the stack at any time. Recursive or heavily nested programs may require more.
+The build also looks for board library source under:
 
-**Increasing:** Programs with deep quotation nesting or combinator chains may benefit from a larger stack. Increase in powers of two.
+- `boards/<board>/ffi.c`
+- `boards/<board>/lib/board.froth`
+- `boards/<board>/board.json` for generated pin constants when present
 
----
-
-## FROTH_RS_CAPACITY
-
-| Property | Value |
-|----------|-------|
-| **Type** | Integer |
-| **Default** | `256` |
-| **CMake variable** | `FROTH_RS_CAPACITY` |
-
-Number of cells reserved for the return stack. The return stack stores return addresses for word calls and temporarily stashed values placed there by `>r`. Overflow throws error -4.
-
-Sizing follows the same rules as `FROTH_DS_CAPACITY`. Return stack depth is bounded by call nesting depth, not by the number of data values in flight. A flat program (no recursion, no deeply nested `dip`/`keep` chains) rarely uses more than 32 return stack slots.
-
----
-
-## FROTH_HEAP_SIZE
+### `FROTH_PLATFORM`
 
 | Property | Value |
-|----------|-------|
-| **Type** | Integer (bytes) |
-| **Default** | `4096` |
-| **CMake variable** | `FROTH_HEAP_SIZE` |
-| **CLI flag** | `--heap-size <bytes>` |
+|---|---|
+| Type | string |
+| Default | `posix` |
 
-Total heap size in bytes. The heap stores:
-- Quotation bodies (word definitions).
-- String literals.
-- Any other heap-allocated values.
+Built-in platforms in the repo:
 
-The heap is a single contiguous region. Allocations are bump-pointer within regions; `release` frees everything back to the most recent `mark`. There is no garbage collector.
+- `posix`
+- `esp-idf`
 
-**Estimating required size:** A word definition with a 10-word body occupies roughly 40–80 bytes depending on cell size. A modest vocabulary of 50–100 custom words typically fits in 4–8 KB. If `info` shows heap usage consistently above 75%, increase this value.
+In manifest-driven builds, `[target]` is the normal surface:
 
-**On ESP32:** The available DRAM for the Froth heap depends on what the board library and IDF allocate. The default 4 KB is conservative; 16–64 KB is typical on boards with 520 KB of DRAM.
+```toml
+[target]
+board = "esp32-devkit-v1"
+platform = "esp-idf"
+```
 
----
+## VM Size And Capacity Variables
 
-## FROTH_SLOT_TABLE_SIZE
+These are the runtime sizing knobs defined in `CMakeLists.txt`.
 
-| Property | Value |
-|----------|-------|
-| **Type** | Integer |
-| **Default** | `128` |
-| **CMake variable** | `FROTH_SLOT_TABLE_SIZE` |
+### `FROTH_CELL_SIZE_BITS`
 
-Maximum number of named word slots. Each slot is an entry in the dictionary mapping a name (interned string) to a value (typically a quotation). The slot table is a fixed-size array; attempting to define more words than this limit results in a "slot table full" error.
+Cell width in bits. Supported values: `8`, `16`, `32`, `64`.
 
-Each slot occupies approximately 8–16 bytes depending on cell size and name-storage strategy. At the default (128 slots, 32-bit), the slot table occupies roughly 1–2 KB.
+A Froth cell is the native unit for:
 
-The stdlib and board library together consume approximately 40–60 slots. A typical application with 30–50 custom words fits comfortably at 128. Larger vocabularies or heavily factored code may require 256 or more.
+- numbers
+- slot references
+- quotation references
+- CellSpace contents
 
----
+Most builds target `32` bits.
 
-## FROTH_HAS_SNAPSHOTS
+### `FROTH_DS_CAPACITY`
 
-| Property | Value |
-|----------|-------|
-| **Type** | Boolean |
-| **Default** | `ON` |
-| **CMake variable** | `FROTH_HAS_SNAPSHOTS` |
-| **CLI flag** | `--no-snapshots` (to disable) |
+Data stack capacity in cells. Default: `256`.
 
-Controls whether snapshot support is compiled in. When `ON`, the `save`, `restore`, and `wipe` words are available and the boot sequence includes a snapshot restore step.
+### `FROTH_RS_CAPACITY`
 
-Snapshot storage is board-specific:
-- **ESP32:** Uses NVS (Non-Volatile Storage) in flash. Two slots are maintained in an A/B rotation; a write interrupted by power loss does not corrupt the surviving slot.
-- **RP2040:** Uses a region of flash above the firmware binary. Write strategy depends on the platform layer version; check the RP2040 board notes.
-- **POSIX:** Writes to a file at `~/.froth/snapshot.bin`.
+Return stack capacity in cells. Default: `256`.
 
-Set to `OFF` to reduce firmware size on targets where persistence is not needed (e.g., a device that always boots from a compiled-in vocabulary loaded by the board library).
+### `FROTH_CS_CAPACITY`
 
----
+Control stack capacity in cells. Default: `256`.
 
-## FROTH_HAS_LINK
+This is internal VM control/executor storage, not user CellSpace.
 
-| Property | Value |
-|----------|-------|
-| **Type** | Boolean |
-| **Default** | `ON` |
-| **CMake variable** | `FROTH_HAS_LINK` |
-| **CLI flag** | `--no-link` (to disable) |
+### `FROTH_HEAP_SIZE`
 
-Controls whether the link layer is compiled in. The link layer is the protocol used by the Froth daemon and CLI to communicate with the board over serial: framing, acknowledgment, error signaling, and binary transfer for snapshot operations.
+Heap size in bytes. Default: `4096`.
 
-When `ON`:
-- The board speaks the Froth link protocol on the serial port.
-- `froth connect`, `froth send`, and `froth daemon` all function.
-- The VSCode extension can connect and manage snapshots.
+The heap holds:
 
-When `OFF`:
-- The board outputs raw REPL text on the serial port with no framing.
-- A plain terminal emulator can connect, but the CLI and VSCode extension cannot.
-- Useful for targets where the link overhead (a few hundred bytes of code) is too large, or for boards connected to custom host software that implements its own protocol.
+- quotation bodies
+- string storage
+- patterns
+- other heap-allocated objects
 
-`FROTH_HAS_LINK=OFF` implies that `froth flash` and `froth send` cannot be used after deployment. The initial firmware must still be written by the host toolchain.
+### `FROTH_SLOT_TABLE_SIZE`
+
+Maximum slot count. Default: `128`.
+
+Slots back:
+
+- word definitions
+- slot-backed data such as `value`
+- CellSpace addresses bound by `create` and `variable`
+
+### `FROTH_DATA_SPACE_SIZE`
+
+CellSpace capacity in cells. Default: `256`.
+
+This is the mutable tagged-cell storage used by:
+
+- `create`
+- `allot`
+- `variable`
+- `@`
+- `!`
+- `+!`
+
+If you expect arrays, framebuffers, or many mutable cells, this is the setting to increase.
+
+### `FROTH_LINE_BUFFER_SIZE`
+
+REPL input buffer size in bytes. Default: `1024`.
+
+### `FROTH_MAX_PERM_SIZE`
+
+Maximum supported `perm` window size. Default: `16`.
+
+This is still a real implementation limit for generated and user-authored `perm` patterns.
+
+### `FROTH_STRING_MAX_LEN`
+
+Maximum string length in bytes. Default: `256`.
+
+### `FROTH_TBUF_SIZE`
+
+Transient string buffer size in bytes. Default: `1024`.
+
+### `FROTH_TDESC_MAX`
+
+Maximum concurrent transient string descriptors. Default: `32`.
+
+### `FROTH_FFI_MAX_TABLES`
+
+Maximum number of registered FFI tables. Default: `8`.
+
+This matters if you combine:
+
+- kernel primitives
+- board FFI
+- snapshot primitives
+- project FFI
+- additional future tables
+
+## Feature Toggles
+
+### `FROTH_HAS_SNAPSHOTS`
+
+Enables `save`, `restore`, and `wipe`, plus snapshot boot restore.
+
+When enabled, Froth persists:
+
+- overlay slot bindings
+- reachable heap objects
+- the allocated CellSpace prefix
+
+### `FROTH_HAS_LIVE`
+
+Enables the live transport used by the daemon, CLI, and editor tooling.
+
+When disabled, the binary falls back to the plain REPL path instead of the exclusive live-session transport.
+
+### `FROTH_USER_PROGRAM`
+
+Path to a `.froth` source file embedded into the firmware image as the base program.
+
+Manifest-driven builds generate this automatically from the resolved project entry.
+
+### `FROTH_PROJECT_FFI_CONFIG`
+
+Path to the generated CMake fragment that describes resolved project FFI sources, include paths, and defines.
+
+In normal project builds, the CLI generates this under:
+
+```text
+.froth-build/project_ffi.cmake
+```
+
+## Snapshot Storage Variables
+
+These are advanced target-level settings, mainly relevant when porting Froth or tuning persistence:
+
+- `FROTH_SNAPSHOT_BLOCK_SIZE`
+- `FROTH_SNAPSHOT_PATH_A`
+- `FROTH_SNAPSHOT_PATH_B`
+
+## Practical Defaults
+
+If you are starting a normal project:
+
+- leave cell size at `32`
+- leave the slot table at `128` until you actually need more
+- raise heap size before raising anything else if you are defining many words or strings
+- raise `FROTH_DATA_SPACE_SIZE` when you start using CellSpace seriously
+- use `[ffi]` only for the narrow C boundary you actually need
+
+For the command-level build behavior, see [CLI Reference](/reference/cli/).

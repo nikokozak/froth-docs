@@ -5,7 +5,7 @@ weight: 7
 
 _Not a project tutorial. A workflow tutorial. How to think and work in Froth: REPL-first development, VSCode integration, building incrementally, snapshots as checkpoints, debugging, and a worked 15-minute development session._
 
-Most embedded development follows one workflow: write in an editor, compile, flash, run, observe. Froth's workflow is fundamentally different. The board is running an interpreter right now, waiting for your next input. Type a word, it runs immediately. The board responds in real time.
+Most embedded development follows one workflow: write in an editor, compile, flash, run, observe. Froth's workflow is different. The board is running an interpreter, waiting for your next input. Type a word, it runs immediately. The board responds in real time.
 
 The reader who hasn't internalized this is leaving most of the value on the table, using Froth like a Forth compiler (write a complete program, load it, run it) instead of iterating continuously at the REPL. This tutorial makes the shift explicit.
 
@@ -43,7 +43,7 @@ The selection can be any size: a single line, a word definition, or a multi-word
 
 ### Send file: Cmd+Shift+Enter (Mac) / Ctrl+Shift+Enter (Windows/Linux)
 
-Sends the entire current file to the REPL. Every word definition in the file is evaluated in order. Definitions that already exist in the session are replaced.
+Sends the entire active file to the REPL. Every word definition in the file is evaluated in order. Definitions that already exist in the session are replaced.
 
 Use this for:
 
@@ -119,7 +119,7 @@ Each layer is one word. Each word is tested before composing. When `sensor-alert
 froth> 4095 counts->mv .s
 ```
 
-`.s ( -- )` prints the current stack contents without consuming them. If you're not sure what's on the stack after a word runs, `.s` shows you.
+`.s ( -- )` prints the stack contents without consuming them. If you're not sure what's on the stack after a word runs, `.s` shows you.
 
 ## Using snapshots as checkpoints
 
@@ -196,7 +196,7 @@ froth> see blink
   LED_BUILTIN 0 gpio.write ms ;
 ```
 
-`see` reconstructs the definition from the stored body. If you've redefined the word, `see` shows the current version.
+`see` reconstructs the definition from the stored body. If you've redefined the word, `see` shows the latest version.
 
 Useful when:
 
@@ -318,11 +318,12 @@ Returns `1` (true) when pressed. The `0 =` inverts the active-low logic.
 Back to the file:
 
 ```froth
-0 'press-count def
+'press-count variable
+0 press-count !
 
 : on-press ( -- )
-  press-count 1 + 'press-count def
-  "Press " s.emit press-count . cr ;
+  1 press-count +!
+  "Press " s.emit press-count @ . cr ;
 
 : wait-for-press ( -- )
   [ pressed? not ] [ 10 ms ] while
@@ -334,13 +335,13 @@ Back to the file:
 Select all three definitions, Cmd+Enter. Test each:
 
 ```froth
-froth> press-count .
+froth> press-count @ .
 0
 froth> on-press
 Press 1
 froth> on-press
 Press 2
-froth> press-count .
+froth> press-count @ .
 2
 ```
 
@@ -351,7 +352,7 @@ Add to the file:
 ```froth
 : button-counter ( -- )
   BOOT_BUTTON 0 gpio.mode
-  0 'press-count def
+  0 press-count !
   [ true ] [ wait-for-press on-press ] while ;
 ```
 
@@ -374,21 +375,21 @@ It works. Save:
 froth> save
 ```
 
-The printed format could include more context. Check the current version:
+The printed format could include more context. Check the latest definition:
 
 ```froth
 froth> see on-press
 : on-press ( -- )
-  press-count 1 + 'press-count def
-  "Press " s.emit press-count . cr ;
+  1 press-count +!
+  "Press " s.emit press-count @ . cr ;
 ```
 
 Edit `on-press` in the file:
 
 ```froth
 : on-press ( -- )
-  press-count 1 + 'press-count def
-  "Button press #" s.emit press-count . cr ;
+  1 press-count +!
+  "Button press #" s.emit press-count @ . cr ;
 ```
 
 Send just this selection with Cmd+Enter. Test immediately:
@@ -398,7 +399,7 @@ froth> on-press
 Button press #3
 ```
 
-The new version is live. `press-count` is still at 3 from before. `button-counter` already uses the new `on-press` because of coherent redefinition. No restart needed.
+The new version is live. `press-count` is still at 3 from before. `button-counter` uses the new `on-press` because of coherent redefinition. No restart needed.
 
 ### Minutes 13-15: finalize and save
 

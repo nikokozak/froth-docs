@@ -13,7 +13,7 @@ The standard embedded workflow still revolves around edit, compile, link, flash,
 
 Froth is built around a different loop. The board stays live. You connect to it, define a word, test it immediately, redefine it, and test its callers without rebuilding the whole image. That is not just "a REPL on a microcontroller." It depends on coherent redefinition, recoverable errors, and a runtime model that treats live development as normal rather than exceptional.
 
-The point is not that C and C++ are bad languages. The point is that they optimize for a different style of work. Froth optimizes for exploratory development on real hardware, where the fastest way to understand the system is to talk to it directly and keep the session alive while you do.
+C and C++ optimize for a different style of work. Froth optimizes for exploratory development on real hardware, where the fastest way to understand the system is to talk to it directly and keep the session alive while you do.
 
 ---
 
@@ -27,7 +27,7 @@ CircuitPython and similar environments usually bring along a fairly large runtim
 
 Froth is trying to keep the live, incremental feel of those systems while staying much closer to the metal. The runtime is small. The operational model is explicit. The host tooling is designed so new boards can be added over time instead of the language being locked to one vendor stack or one family of devices.
 
-If you want a batteries-included scripting environment, Froth may not be the point. If you want a live system that still feels like firmware work, that is exactly the point.
+If you want a batteries-included scripting environment, Froth may not fit. If you want a live system that still feels like firmware work, it does.
 
 ---
 
@@ -35,7 +35,7 @@ If you want a batteries-included scripting environment, Froth may not be the poi
 
 Froth is not meant to be trapped inside one board ecosystem.
 
-The project system already revolves around a `froth.toml` manifest that selects a board and platform for a project. That matters because it keeps the language, the host tooling, and the board support story loosely coupled. Adding support for a new board should be a matter of adding the board package and platform plumbing, not inventing a new language fork.
+The project system revolves around a `froth.toml` manifest that selects a board and platform for a project, resolves Froth dependencies, and can declare project-local FFI sources too. That matters because it keeps the language, the host tooling, and the board support story loosely coupled. Adding support for a new board or a new project-specific C boundary should not require inventing a language fork.
 
 This is one of the central bets in Froth: interactive embedded development should not require choosing between "portable but abstract" and "close to the metal but locked to one toolchain." The language is intended to sit in the middle. It should be small enough to embed, structured enough to tool, and open enough that support for other boards can be added as the system grows.
 
@@ -119,29 +119,50 @@ This is not special syntax. It is an ordinary word defined in Froth itself. The 
 
 ---
 
-## Profiles are a project-level direction, not a finished surface
+## Named inputs without a locals language
 
-Froth does have a profile story, but it should be understood as a direction for the project system rather than a settled, per-file feature mechanism.
+Froth supports readable named inputs on ordinary `:` definitions.
 
-The likely home for profiles is the project manifest, `froth.toml`, alongside board and platform selection. That is the level where profile choices make the most sense: they affect what gets built into a target, what capabilities a project expects, and what tradeoffs the firmware is making. The basic idea is the same as the earlier drafts on this site: keep the core language small, and make larger capabilities explicit rather than implicit. But the exact user-facing shape is not finished, and this page should not pretend otherwise.
+```froth
+: sumsq ( x y -- n )
+  x x * y y * + ;
+```
 
-What does look stable is the intent:
+Froth did **not** add mutable locals, closures, or a second programming model. The names are read-only aliases for entry-stack values. They are there to make straight-line stack code read like the formula it already is.
 
-- a small core language and runtime
-- optional capability layers instead of one monolithic build
-- build-time clarity about what a project expects from the target
+**Why this matters:** Froth gets more readable without abandoning its concatenative model.
 
-For the profile ideas currently in view, a more accurate status is:
+---
 
-| Profile idea | Status | Notes |
-|---|---|---|
-| `FROTH-Core` / `FROTH-Base` | Current design vocabulary | Useful as the baseline split between the core runtime and the standard words built on top of it. |
-| `FROTH-Named` | In progress | An optional capability, but not something this site should present as a settled public surface yet. |
-| `FROTH-Checked` | To do | Best understood as a future development-time checking mode. |
-| `FROTH-Perf` | To do | A future optimization layer, likely target-sensitive. |
-| Other profile ideas | Future / exploratory | Useful for design discussion, but not yet something to document as shipped fact. |
+## Mutable state without slot soup
 
-**Why this matters:** Froth wants the language core to stay small while still leaving room for richer builds. The right way to do that is probably through the project system, not by pretending a large matrix of profiles is already nailed down.
+Mutable state belongs in a dedicated cell region: CellSpace.
+
+The core words are small and Forth-like:
+
+- `create`
+- `allot`
+- `variable`
+- `@`
+- `!`
+
+With helpers such as `cell+`, `cells`, and `+!`, that is enough to write real mutable state without turning every update into another slot rebind.
+
+**Why this matters:** Froth has a direct story for mutable aggregate data that still keeps the runtime model small and snapshot-safe.
+
+---
+
+## Build-Time Capability Selection
+
+The features break down like this:
+
+- core language and stdlib: always there
+- named inputs and CellSpace: part of the ordinary language surface
+- snapshots, live transport, sizing limits, and project FFI: selected at build time through `froth.toml` and CMake
+
+That is a better fit for embedded work anyway. The question that matters is usually not "should this one file have a feature," but "what capabilities did we build into this target?"
+
+**Why this matters:** Froth keeps explicit capability boundaries, but the practical boundary is the project build, not a per-file switchboard.
 
 ---
 
@@ -149,7 +170,7 @@ For the profile ideas currently in view, a more accurate status is:
 
 Interactive development on a microcontroller has a structural problem: RAM is volatile. Power-cycle the board, and the session is gone. Traditional embedded workflows solve this by treating the device as a compile-and-flash target. Froth takes a different approach.
 
-A snapshot captures the current heap and slot table and writes them to flash. On boot, that state can be restored before you resume work.
+A snapshot captures overlay slot bindings, reachable heap objects, and the CellSpace image, then writes that state to flash. On boot, that state can be restored before you resume work.
 
 The workflow:
 
@@ -161,7 +182,7 @@ froth> save
 \ snapshot written to flash
 ```
 
-Power cycle the board. The word `blink` is still there.
+Power cycle the board. The word `blink` is there.
 
 The `autorun` hook bridges the gap between development session and deployed device. Define a word named `autorun`, save a snapshot, and that word is called on later boots.
 
@@ -180,9 +201,9 @@ save
 
 Froth is designed to be tooled, not just typed.
 
-**The CLI** already handles project creation, connection, build, flash, send, and diagnostics. A `froth.toml` project gives it enough structure to resolve includes, choose a board and platform, and stage a build without asking the user to wire the toolchain together by hand.
+**The CLI** handles project creation, connection, build, flash, send, and diagnostics. A `froth.toml` project gives it enough structure to resolve includes, choose a board and platform, declare project-local FFI, and stage a build without asking the user to wire the toolchain together by hand.
 
-**The VSCode extension** already provides syntax highlighting, send-selection, send-file, local-target mode, status bar state, a small device sidebar, and a live console. It is intentionally thinner than a full language server today, but it already supports the core live-development loop.
+**The VSCode extension** provides syntax highlighting, send-selection, send-file, local-target mode, status bar state, a small device sidebar, and a live console. It is intentionally thinner than a full language server, but it supports the core live-development loop.
 
 **The daemon architecture** sits between the CLI or editor and the serial port. One process owns the connection, and the tools talk to that process. That avoids the usual embedded mess where the editor, flasher, monitor, and REPL all fight over the same device node.
 

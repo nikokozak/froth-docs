@@ -162,7 +162,7 @@ Start with `2 300 blink-n` so you can check the behavior quickly, then try a lon
 Instead of typing a literal delay every time, define a named value:
 
 ```froth
-froth> 500 'blink-delay def
+froth> 500 'blink-delay value
 froth> blink-delay blink
 froth> blink-delay blink
 ```
@@ -170,11 +170,11 @@ froth> blink-delay blink
 Change the delay in one place:
 
 ```froth
-froth> 100 'blink-delay def
+froth> 100 'blink-delay to
 froth> blink-delay blink
 ```
 
-Faster. `def` binds any value to a name. When you type `blink-delay`, Froth pushes whatever value is stored in that slot.
+Faster. `value` and `to` are the data-binding surface for slot-backed values. When you type `blink-delay`, Froth pushes the value stored in that slot.
 
 ## Step 8 — Loop forever
 
@@ -199,7 +199,7 @@ Once `blink` and `blink-loop` work the way you want, save the session to flash:
 froth> save
 ```
 
-This writes the current heap and slot table to the board's non-volatile storage. Your word definitions survive a power cycle.
+This writes the overlay snapshot to non-volatile storage. Your word definitions, reachable data, and CellSpace state survive a power cycle.
 
 To make the LED start blinking automatically at boot, define `autorun`:
 
@@ -212,7 +212,7 @@ froth> save
 
 Unplug and replug the USB cable. The LED starts blinking immediately, no computer needed.
 
-**Recovery:** If your `autorun` has a bug that prevents the REPL from starting, hold the BOOT button during the first 750ms after power-on. Froth detects this and skips the snapshot restore and `autorun`, booting into a clean session. From there you can redefine `autorun`, save, and power-cycle again.
+**Recovery:** If your `autorun` has a bug that prevents the REPL from starting, send Ctrl-C during the `boot: CTRL-C for safe boot` window at power-on. Froth skips restore and `autorun`, boots the base image only, and gives you a clean session to repair or wipe the saved overlay.
 
 ## Extensions
 
@@ -236,18 +236,19 @@ froth> [ true ] [ sos ] while
 Pressing the BOOT button switches between slow (500ms) and fast (100ms) blink:
 
 ```froth
-froth> 500 'current-delay def
+froth> 'current-delay variable
+froth> 500 current-delay !
 
 froth> : toggle-speed ( -- )
-...     current-delay 100 = [ 500 ] [ 100 ] if
-...     'current-delay def ;
+...     current-delay @ 100 = [ 500 ] [ 100 ] if
+...     current-delay ! ;
 
 froth> : button-blink ( -- )
 ...     BOOT_BUTTON 0 gpio.mode
 ...     LED_BUILTIN 1 gpio.mode
 ...     [ true ] [
 ...       BOOT_BUTTON gpio.read 0 = [ toggle-speed ] when
-...       current-delay blink
+...       current-delay @ blink
 ...     ] while ;
 ```
 
@@ -261,4 +262,4 @@ When the BOOT button is pressed (GPIO 0 reads `0`), `toggle-speed` swaps the del
 - **`dup`** before consuming: when you need the same value in two places, `dup` it before the first use.
 - **`times` for counted repetition:** `5 [ 500 blink ] times` blinks 5 times.
 - **`autorun` for standalone deployment:** define `autorun`, call `save`, power-cycle. The board runs your program at boot.
-- **Safe boot:** hold BOOT during power-on to skip `autorun` and get a clean REPL.
+- **Safe boot:** send Ctrl-C during the boot window to skip restore and `autorun` and get a clean session.

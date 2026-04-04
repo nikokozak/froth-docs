@@ -3,7 +3,11 @@ title: "Word Reference"
 weight: 1
 ---
 
-Complete reference for all Froth words. Entries follow the format:
+Complete reference for VM primitives and stdlib words.
+
+Board and platform APIs such as `gpio.*`, `i2c.*`, and `uart.*` live under [Hardware APIs](/reference/hardware/).
+
+Entries follow the format:
 
 ```text
 word  ( stack-effect )  One-line description.
@@ -377,9 +381,9 @@ froth> 10 20 2 q.pack
 [<q: 10 20>]
 ```
 
-**`call`** *(C)*  `( q -- ... )`
+**`call`** *(C)*  `( callable -- ... )`
 
-Executes a quotation. Stack effect depends on quotation body.
+Executes a quotation or a slot reference. Stack effect depends on the callee.
 
 ```froth
 froth> 5 [ 2 * ] call
@@ -415,31 +419,79 @@ Pushes the pattern value.
 
 ---
 
-## Definitions
+## Definitions and Bindings
 
-**`def`** *(C)*  `( val 'name -- )`
+**`def`** *(C)*  `( slot value -- )`
 
-Binds a value to a named slot. Creates the slot if it does not exist; updates it if it does.
+Raw slot binding primitive. Accepts any Froth value and clears arity metadata on successful rebind.
 
 ```froth
-froth> [ 2 * ] 'double def
+froth> 'double [ 2 * ] def
 ```
 
-**`get`** *(C)*  `( 'name -- val )`
+**`value`** *(C)*  `( value slot -- )`
 
-Retrieves the current value from a named slot without calling it.
+Binds non-quotation data to a slot and stamps the slot with `(0 -- 1)` metadata.
+
+```froth
+froth> 34 'sensor-pin value
+```
+
+**`to`** *(C)*  `( value slot -- )`
+
+Alias for `value`.
+
+```froth
+froth> 1000 'alert-threshold to
+```
+
+**`assign`** *(C)*  `( value slot -- )`
+
+Alias for `value`.
+
+```froth
+froth> 42 'answer assign
+```
+
+**`set`** *(C)*  `( value slot -- )`
+
+Alias for `value`.
+
+```froth
+froth> 99 'counter set
+```
+
+**`is`** *(C)*  `( quote slot -- )`
+
+Binds a quotation to a slot. Use this when the intent is callable rebinding rather than data rebinding.
+
+```froth
+froth> [ 1 + ] 'hook is
+```
+
+**`defer`** *(C)*  `( 'name -- )`
+
+Declares an unbound slot.
+
+```froth
+froth> 'hook defer
+```
+
+**`get`** *(C)*  `( 'name -- value )`
+
+Retrieves the value from a named slot without calling it.
 
 ```froth
 froth> 'double get
 the quotation stored in double
 ```
 
-**`arity!`** *(C)*  `( n 'name -- )`
+**`arity!`** *(C)*  `( slot in out -- )`
 
-Records the arity (input count) annotation for a named word. Used by FROTH-Checked.
+Records arity metadata for a slot-backed word.
 
 ```froth
-froth> 2 'my-word arity!
+froth> 'my-word 2 1 arity!
 ```
 
 ---
@@ -507,7 +559,7 @@ signals application error 42
 
 ## Strings
 
-Requires FROTH-String-Lite or FROTH-String profile unless noted.
+These words are part of the normal string surface in standard builds.
 
 **`s.emit`** *(C)*  `( s -- )`
 
@@ -595,7 +647,73 @@ froth> "hello" s.emit cr
 
 ---
 
-## Memory
+## Memory and State
+
+**`create`** *(C)*  `( slot -- )`
+
+Binds a slot to the CellSpace allocation pointer. Top-level only.
+
+```froth
+froth> 'rows create
+froth> 3 allot
+```
+
+**`allot`** *(C)*  `( n -- )`
+
+Reserves `n` zero-initialized cells in CellSpace. Top-level only.
+
+```froth
+froth> 8 allot
+```
+
+**`variable`** *(C)*  `( slot -- )`
+
+Allocates one CellSpace cell and binds its address to the slot.
+
+```froth
+froth> 'counter variable
+```
+
+**`@`** *(C)*  `( addr -- value )`
+
+Fetches one tagged cell from CellSpace.
+
+```froth
+froth> counter @
+```
+
+**`!`** *(C)*  `( value addr -- )`
+
+Stores one tagged cell into CellSpace.
+
+```froth
+froth> 42 counter !
+```
+
+**`cells`** *(Froth)*  `( n -- n )`
+
+Cell-count helper. In CellSpace, addresses are already cell-indexed, so this is an identity word kept for readability.
+
+```froth
+froth> 8 cells
+[8]
+```
+
+**`cell+`** *(Froth)*  `( addr -- addr' )`
+
+Advances a CellSpace address by one cell.
+
+```froth
+froth> rows cell+
+```
+
+**`+!`** *(Froth)*  `( delta addr -- )`
+
+Adds `delta` to the number stored at `addr`.
+
+```froth
+froth> 1 counter +!
+```
 
 **`mark`** *(C)*  `( -- region )`
 
@@ -608,7 +726,7 @@ froth> mark
 
 **`release`** *(C)*  `( region -- )`
 
-Frees all heap memory allocated since the corresponding `mark`. References to freed memory become invalid.
+Frees all heap memory allocated since the corresponding `mark`.
 
 ```froth
 froth> mark ... release
@@ -629,7 +747,7 @@ outputs 42
 
 **`.s`** *(C)*  `( -- )`
 
-Displays all current stack values without consuming them. Bottom to top, with top labeled.
+Displays all stack values without consuming them. Bottom to top, with top labeled.
 
 ```froth
 froth> 1 2 3 .s
@@ -638,7 +756,7 @@ displays [1 2 3]
 
 **`words`** *(C)*  `( -- )`
 
-Prints a list of all defined word names in the current session.
+Prints a list of all defined word names in the session.
 
 ```froth
 froth> words
@@ -655,7 +773,7 @@ froth> 'dup see
 
 **`info`** *(C)*  `( -- )`
 
-Prints runtime statistics: heap usage, slot count, stack depth, cell size, enabled profiles.
+Prints runtime information such as version, board, cell size, max payload, heap usage, CellSpace usage, and slot count.
 
 ```froth
 froth> info
@@ -664,8 +782,6 @@ froth> info
 ---
 
 ## Auxiliary Stack (Return Stack)
-
-Requires FROTH-Addr profile or built-in primitive depending on target.
 
 **`>r`** *(C)*  `( a -- ) ( R: -- a )`
 
@@ -703,7 +819,7 @@ Requires `FROTH_HAS_SNAPSHOTS` build option.
 
 **`save`** *(C)*  `( -- )`
 
-Writes the current heap and slot table to non-volatile storage. On ESP32, uses NVS with A/B rotation.
+Writes the overlay snapshot to non-volatile storage. This includes overlay slot bindings, reachable heap objects, and the allocated CellSpace prefix.
 
 ```froth
 froth> save
@@ -711,7 +827,7 @@ froth> save
 
 **`restore`** *(C)*  `( -- )`
 
-Loads the most recently saved snapshot, replacing the current heap and slot table. Called automatically at boot.
+Restores the most recent snapshot over the base image. Called automatically at boot when snapshots are enabled and safe boot was not requested.
 
 ```froth
 froth> restore
@@ -719,7 +835,7 @@ froth> restore
 
 **`wipe`** *(C)*  `( -- )`
 
-Clears all saved snapshots. The next boot starts with an empty session (stdlib still loads).
+Erases saved snapshots and resets the target back to its base image.
 
 ```froth
 froth> wipe
@@ -787,12 +903,4 @@ Calls `q` exactly `n` times.
 ```froth
 froth> 3 [ 42 . ] times
 prints 42 three times
-```
-
-**`set`** *(Froth)*  `( val 'name -- )`
-
-Stores `val` in the named slot. Alias for `def`.
-
-```froth
-froth> 99 'counter set
 ```

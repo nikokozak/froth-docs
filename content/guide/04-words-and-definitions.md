@@ -43,7 +43,7 @@ Here is what happened with `5 double .`:
 2. `double` runs its body: `2 *`. First `2` is pushed, giving `[5 2]`. Then `*` multiplies the top two values, leaving `[10]`.
 3. `.` prints and consumes the top value. Output: `10`. Stack: `[]`
 
-The word `double` is now part of your session. Type `words` and you will see it in the list alongside the built-in vocabulary.
+The word `double` is part of your session. Type `words` and you will see it in the list alongside the built-in vocabulary.
 
 ## What `:` and `;` are shorthand for
 
@@ -51,15 +51,15 @@ The colon-semicolon syntax is convenient, but it is not the underlying mechanism
 
 A quotation is a block of code wrapped in `[` and `]`. It does not run when you type it. Instead, the block itself lands on the stack as a single value, ready to be executed later.
 
-`def` takes two things from the stack: a quotation and a name. It binds the quotation to the name, creating a word.
+`def` is the raw slot-binding primitive. Its stack effect is `( slot value -- )`: first the slot reference, then the value to store there. When that value is a quotation, you have defined a callable word.
 
 The desugared form of `: double 2 * ;` is:
 
 ```froth
-[ 2 * ] 'double def
+'double [ 2 * ] def
 ```
 
-Read this as: "Push the quotation `[ 2 * ]` onto the stack. Push the name `double`, quoted with `'` so Froth treats it as a name rather than looking it up. Call `def` to bind the quotation to that name."
+Read this as: "Push the slot reference for `double` with `'double`. Push the quotation `[ 2 * ]`. Call `def` to bind that quotation into the slot."
 
 The `'` (tick) prefix is important. Without it, writing `double def` would tell Froth to look up `double` and execute it. Tick says: "I mean the name itself, not whatever the name refers to."
 
@@ -67,7 +67,7 @@ Both forms produce exactly the same result. You can verify this by defining one 
 
 ```froth
 froth> : double ( n -- doubled ) 2 * ;
-froth> [ 3 * ] 'triple def
+froth> 'triple [ 3 * ] def
 froth> 4 double .
 8
 froth> 4 triple .
@@ -80,7 +80,7 @@ The colon-semicolon form exists because it reads more naturally. You will use it
 
 Every word name in Froth corresponds to a slot. A slot is a named container that holds a value. When you define a word with `def` (or with `: ;`, which calls `def`), Froth creates or updates the slot for that name and stores the quotation in it.
 
-When you call a word, Froth finds the slot for that name and runs whatever is inside it *at the moment of the call*. Not at the moment the word was defined. Not a frozen copy from some earlier point. The current contents of the slot, right now.
+When you call a word, Froth finds the slot for that name and runs whatever is inside it *at the moment of the call*. Not at the moment the word was defined. Not a frozen copy from some earlier point. The contents of the slot at that moment.
 
 This distinction matters as soon as one word uses another. Consider:
 
@@ -98,7 +98,7 @@ Slot: double           Slot: quadruple
 └──────────┘           └───────────────────┘
 ```
 
-The slot for `quadruple` does not contain a copy of `double`'s body. It contains the name `double`, twice. When `quadruple` runs, it looks up the `double` slot each time. The lookup always reflects whatever `double` currently holds.
+The slot for `quadruple` does not contain a copy of `double`'s body. It contains the name `double`, twice. When `quadruple` runs, it looks up the `double` slot each time. The lookup always reflects whatever `double` holds.
 
 ## Calling words
 
@@ -108,7 +108,7 @@ When you type a word name in the REPL or use it inside a definition, Froth follo
 2. If the slot holds a quotation, run it.
 3. If the name has no slot, signal an error.
 
-This lookup happens at call time, every time. You can inspect any word's current definition with `see`:
+This lookup happens at call time, every time. You can inspect any word's definition with `see`:
 
 ```froth
 froth> see double
@@ -143,7 +143,7 @@ froth> 3 quadruple .
 27
 ```
 
-The result is 27, not 12. `quadruple` was not redefined. Its body still says `double double`. But when it runs, it looks up the `double` slot, and that slot now holds `[ 3 * ]`. So `quadruple` calls the new `double`: 3 becomes 9, then 9 becomes 27.
+The result is 27, not 12. `quadruple` was not redefined. Its body still says `double double`. But when it runs, it looks up the `double` slot, and that slot holds `[ 3 * ]`. So `quadruple` calls the new `double`: 3 becomes 9, then 9 becomes 27.
 
 This is coherent redefinition. When you change a word, every word that calls it immediately reflects the change. You do not need to reload anything. You do not need to redefine the callers. The slot lookup guarantees that references always point to the latest version.
 
@@ -169,7 +169,7 @@ The convention for labels:
 : print-top ( n -- ) . ;
 ```
 
-The VSCode extension reads these comments to display inline hints as you type. Getting into the habit now pays off as your programs grow.
+The VSCode extension reads these comments to display inline hints as you type. Getting into the habit early pays off as your programs grow.
 
 ## Exercises
 
@@ -181,7 +181,7 @@ The VSCode extension reads these comments to display inline hints as you type. G
 **Exercise 2.** Define `triple` as above. Then define `: sextuple ( n -- result ) triple triple ;`.
 
 - What does `2 sextuple .` print?
-- Redefine `triple` as `: triple ( n -- result ) 4 * ;`. What does `2 sextuple .` print now, without redefining `sextuple`?
+- Redefine `triple` as `: triple ( n -- result ) 4 * ;`. What does `2 sextuple .` print without redefining `sextuple`?
 - If you expected the answer to stay the same, think about what `sextuple` looks up when it runs.
 
 **Exercise 3.** Write the correct stack effect comment for each of these definitions:

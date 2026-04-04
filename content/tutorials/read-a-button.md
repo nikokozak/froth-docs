@@ -119,12 +119,13 @@ Hold the BOOT button and the LED comes on. Release and it goes off. Input drives
 Press once, LED stays on. Press again, LED stays off. This requires tracking state:
 
 ```froth
-froth> 0 'led-state def
+froth> 'led-state variable
+froth> 0 led-state !
 
 froth> : flip-led ( -- )
-...     led-state 0 =
+...     led-state @ 0 =
 ...     [ 1 ] [ 0 ] if
-...     dup 'led-state def
+...     dup led-state !
 ...     LED_BUILTIN swap gpio.write ;
 
 froth> : toggle-button ( -- )
@@ -138,7 +139,7 @@ froth> : toggle-button ( -- )
 froth> toggle-button
 ```
 
-`def` makes `led-state` a mutable slot. `flip-led` reads the current state, inverts it, stores the new value back, and writes it to the LED pin.
+`variable` allocates one mutable CellSpace cell and binds its address to `led-state`. `flip-led` reads the current state with `@`, inverts it, stores the new value with `!`, and writes it to the LED pin.
 
 There's a problem: if you hold the button, `flip-led` fires every 200ms, toggling rapidly. The LED flickers instead of staying on. We need debouncing.
 
@@ -147,13 +148,13 @@ There's a problem: if you hold the button, `flip-led` fires every 200ms, togglin
 Debouncing means: react to the button press once, then ignore it until the button is released and pressed again. The technique is called edge detection. Instead of reacting to the steady state (pressed or not), we detect the transition from released to pressed.
 
 ```froth
-froth> 1 'prev-state def
+froth> 'prev-state variable
+froth> 1 prev-state !
 
 froth> : button-fell? ( -- flag )
 ...     BOOT_BUTTON gpio.read
-...     dup prev-state swap
-...     'prev-state def
-...     0 = swap 1 = and ;
+...     dup prev-state @ swap prev-state !
+...     swap 0 = swap 1 = and ;
 ```
 
 `button-fell?` returns true only on the *falling edge*: the moment the pin goes from `1` (released) to `0` (pressed). It compares the current reading to the previous one. If the current reading is `0` and the previous was `1`, we have a fresh press.
@@ -164,8 +165,8 @@ Wire it into the toggle:
 froth> : toggle-debounced ( -- )
 ...     BOOT_BUTTON 0 gpio.mode
 ...     LED_BUILTIN 1 gpio.mode
-...     1 'prev-state def
-...     0 'led-state def
+...     1 prev-state !
+...     0 led-state !
 ...     [ true ] [
 ...       button-fell? [ flip-led ] when
 ...       20 ms
@@ -195,5 +196,5 @@ Replace `BOOT_BUTTON` with `15` in any of the words above and they'll work with 
 - **Active-low buttons:** the BOOT button (and most pushbuttons with pull-ups) read `0` when pressed, `1` when released. Check with `0 =` to test for "pressed."
 - **Polling loops:** `[ true ] [ ... ms ] while` checks a condition at a fixed interval.
 - **`when` for conditional execution:** `flag [ action ] when` runs the action only if the flag is true.
-- **State with `def`:** `'led-state def` creates a mutable named slot. Read it by name, update it by pushing a new value and calling `def` again.
+- **State with CellSpace:** `'led-state variable` creates one mutable cell. Read it with `@`, update it with `!`, or increment it with `+!`.
 - **Edge detection / debouncing:** compare the current reading to the previous reading to detect transitions. React on the falling edge, not on the steady state.

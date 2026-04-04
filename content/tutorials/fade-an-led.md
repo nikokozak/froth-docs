@@ -135,7 +135,7 @@ No recompile, no reflash. Redefine and call.
 Wire a potentiometer to GPIO 34 (same setup as the [Read a Sensor](read-a-sensor.md) tutorial). Map the ADC reading (0-4095) to the PWM range (0-255):
 
 ```froth
-froth> 34 'pot-pin def
+froth> 34 'pot-pin value
 
 froth> : read-pot ( -- duty )
 ...     pot-pin adc.read 16 / ;    \ 4095/16 = 255

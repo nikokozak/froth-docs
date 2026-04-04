@@ -7,7 +7,7 @@ aliases:
   - /guide/13-advent-of-code-safe-dial/
 ---
 
-_This chapter uses Posix Froth to solve the first part of [Advent of Code 2025 Day 1: Secret Entrance](https://adventofcode.com/2025/day/1). The point is not the puzzle itself; the point is that plain Froth can parse line-shaped input, keep state on the stack, and finish a real problem without leaving the REPL._
+_This chapter uses Posix Froth to solve the first part of [Advent of Code 2025 Day 1: Secret Entrance](https://adventofcode.com/2025/day/1). It shows that plain Froth can parse line-shaped input, keep state on the stack, and finish a real problem without leaving the REPL._
 
 ## Prerequisites
 

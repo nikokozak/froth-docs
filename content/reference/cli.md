@@ -1,11 +1,11 @@
 ---
 title: "CLI Reference"
-weight: 3
+weight: 5
 ---
 
-This reference is based on the current Go CLI implementation in `tools/cli/` in the main Froth repo.
+This reference is based on the Go CLI implementation in `tools/cli/` in the main Froth repo.
 
-The repo-local build currently produces a binary named `froth-cli` (`cd tools/cli && make build`). The usage strings in the code say `froth`. In practice:
+The repo-local build produces a binary named `froth-cli` (`cd tools/cli && make build`). The usage strings in the code say `froth`. In practice:
 
 - use `froth` if you have installed or renamed the binary that way
 - use `tools/cli/froth-cli` if you are running it directly from the repo
@@ -23,8 +23,6 @@ These flags are parsed before command dispatch:
 | `--serial` | For `info`, `send`, and `reset`: force direct serial instead of daemon routing. |
 | `--daemon` | For `info`, `send`, and `reset`: require daemon routing instead of falling back to serial. |
 | `--clean` | For `build`: remove the build directory before building. |
-
-Notably, the current CLI does **not** implement the old docs' `--baud`, `--json`, or `--verbose` global flags.
 
 ---
 
@@ -140,7 +138,7 @@ froth [--port <path>] [--serial|--daemon] send "<source>"
 
 Sends Froth source for evaluation.
 
-The current implementation supports three modes:
+`send` supports three modes:
 
 1. `send` with no argument:
    uses `froth.toml`, resolves the project entry and dependencies, and sends the merged source
@@ -149,16 +147,17 @@ The current implementation supports three modes:
 3. `send "<source>"`:
    sends the string directly as raw source
 
-Important current behavior:
+Important behavior:
 
 - project/file sends reset the device before evaluation
 - the CLI appends an autorun invocation tail:
   `[ 'autorun call ] catch drop drop`
+- `send` evaluates Froth source only; it does not rebuild project-local FFI
 - default routing is daemon first, then serial fallback
 - `--daemon` requires daemon routing
 - `--serial` forces direct serial
 
-The current CLI does **not** implement `send --expr`, `--no-wait`, or `--timeout`.
+The CLI does **not** implement `send --expr`, `--no-wait`, or `--timeout`.
 
 **Example:**
 
@@ -191,7 +190,7 @@ Routing behavior matches `info` and `send`:
 - `--daemon`: daemon only
 - `--serial`: serial only
 
-The current CLI does **not** implement `reset --safe` or `reset --hard`.
+The CLI does **not** implement `reset --safe` or `reset --hard`.
 
 **Example:**
 
@@ -220,9 +219,10 @@ If run inside a Froth project with `froth.toml`, `build`:
 
 1. resolves includes and dependencies
 2. writes merged source to `.froth-build/resolved.froth`
-3. builds based on `[target]`
+3. resolves `[ffi]` into `.froth-build/project_ffi.cmake` when project-local C is declared
+4. builds based on `[target]`
 
-Current platforms:
+Platforms:
 
 - `posix`: builds into `.froth-build/firmware/Froth`
 - `esp-idf`: stages into `.froth-build/esp-idf/` and runs `idf.py build`
@@ -236,7 +236,7 @@ If no `froth.toml` is found but the current directory is inside the kernel repo,
 
 `--clean` deletes `.froth-build/` (manifest mode) or `build64/` (legacy POSIX mode) before building.
 
-The current CLI does **not** implement `--board`, `--config`, `--release`, `--cell-size`, `--heap-size`, `--no-snapshots`, `--no-link`, or arbitrary `-D` forwarding as top-level CLI flags. Manifest builds do pass CMake args from `froth.toml`.
+The CLI does **not** implement `--board`, `--config`, `--release`, `--cell-size`, `--heap-size`, `--no-snapshots`, `--no-link`, or arbitrary `-D` forwarding as top-level CLI flags. Manifest builds do pass CMake args from `froth.toml`.
 
 **Example:**
 
@@ -273,7 +273,7 @@ Inside the kernel repo without a project manifest:
 - default / `--target posix`: no flash step; prints `build64/Froth`
 - `--target esp-idf`: flashes `targets/esp-idf/`
 
-The current CLI does **not** implement `--firmware`, `--verify`, or `--erase`.
+The CLI does **not** implement `--firmware`, `--verify`, or `--erase`.
 
 **Example:**
 
@@ -324,10 +324,10 @@ Prints:
 - PID
 - daemon version / API version
 - target
-- current device or reconnecting state
+- device or reconnecting state
 - port if known
 
-The current CLI does **not** implement `daemon restart` or `--socket`.
+The CLI does **not** implement `daemon restart` or `--socket`.
 
 **Example:**
 
@@ -349,9 +349,9 @@ froth daemon stop
 froth [--port <path>] doctor
 ```
 
-Checks the local environment and, if possible, the current project and connected device.
+Checks the local environment and, if possible, the project and connected device.
 
-Current checks include:
+Checks include:
 
 - Go runtime version
 - `cmake` on `PATH`
@@ -363,7 +363,7 @@ Current checks include:
 
 `doctor` prints remediation hints inline when something is missing.
 
-The current CLI does **not** implement JSON output.
+The CLI does **not** implement JSON output.
 
 **Example:**
 
@@ -373,12 +373,3 @@ froth --port /dev/ttyUSB0 doctor
 ```
 
 ---
-
-## Current mismatches from the old docs
-
-The previous reference page was out of date in a few important ways:
-
-- it documented unsupported global flags such as `--baud`, `--json`, and `--verbose`
-- it documented unsupported command flags such as `send --expr`, `reset --safe`, and `flash --firmware`
-- it omitted real commands such as `new` and `info`
-- it described the build/flash flow as generic board wrappers, while the implementation is now primarily manifest-driven with `.froth-build/`

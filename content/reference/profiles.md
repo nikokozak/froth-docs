@@ -1,234 +1,157 @@
 ---
-title: "Profiles Reference"
-weight: 2
+title: "Capabilities Reference"
+weight: 4
 ---
 
-A profile is an optional language extension. Profiles add syntax, semantics, or words without changing the core language. Each profile is activated per-file with a declaration at the top:
+This page maps the capability surface in Froth.
+
+The public surface breaks down into three layers:
+
+1. the always-available core language and stdlib
+2. language features built into ordinary `:` definitions, such as named inputs
+3. build-time capabilities selected through `froth.toml` and CMake, such as snapshots, live transport, and project FFI
+
+## Core language
+
+These are part of the normal language surface:
+
+- slots and coherent redefinition
+- quotations and `call`
+- `perm` and the standard stack words built on top of it
+- arithmetic, comparison, bitwise, strings, control flow, and error handling
+- the REPL-oriented introspection words such as `see`, `words`, and `info`
+
+The standard library in `src/lib/core.froth` is also loaded automatically. Words such as `dup`, `swap`, `if`, `when`, `dip`, `keep`, `bi`, `times`, `negate`, `abs`, `cells`, `cell+`, and `+!` are ordinary Froth definitions, not hidden VM magic.
+
+## Named Inputs
+
+Named stack inputs are part of plain `:` definitions.
+
+When a definition includes input names in its stack effect comment, those names become readable aliases for the values that were on the stack at word entry:
 
 ```froth
-#profile FROTH-Named
+: sumsq ( x y -- n )
+  x x * y y * + ;
 ```
 
-Words defined before the declaration do not have access to the profile's features. Words defined after do.
+Important rules:
 
-Profiles exist to keep the core runtime small. On a microcontroller with 8–64 KB of RAM, the difference between including and excluding a profile matters. Include what the application needs; leave out the rest.
+- the names are read-only aliases for entry values, not mutable locals
+- binding order matches `perm`: the last input name is TOS, the first is deepest
+- names do not capture into nested quotations
+- effect-unknown operations such as dynamic `call`, `catch`, or raw user-authored `perm` are still better written in explicit stack style
 
----
+Use named inputs for straight-line words where reusing the same inputs makes the formula clearer than a sequence of shuffles.
 
-## FROTH-Core
+## Binding Intent
 
-**Status:** Mandatory. Always present.
+Froth distinguishes between raw rebinding and intent-specific rebinding.
 
-The minimum runtime: data stack, return stack, heap allocator, slot table, and the core primitives. Every other profile depends on FROTH-Core.
+**`def`** is the raw primitive:
 
-**What it provides:**
-- Stack primitives: `perm`, `call`, `choose`
-- Pattern syntax: `p[...]`
-- Arithmetic: `+`, `-`, `*`, `/mod`
-- Comparisons: `<`, `>`, `=`
-- Bitwise: `and`, `or`, `xor`, `invert`, `lshift`, `rshift`
-- Quotation introspection: `q.len`, `q@`, `q.pack`
-- Definition system: `def`, `get`
-- Error handling: `throw`, `catch`
-- I/O primitives: `emit`, `key`, `key?`
-- Memory: `mark`, `release`
-- Introspection: `.`, `.s`, `words`, `see`, `info`
-- System: `dangerous-reset`
+- stack effect: `( slot value -- )`
+- accepts any tagged Froth value
+- clears arity metadata on successful rebind
 
-**Dependencies:** None.
+Use `def` when you genuinely want the low-level escape hatch.
 
----
+For clearer code, prefer the intent-specific binders:
 
-## FROTH-Base
+- `value`
+- `to`
+- `assign`
+- `set`
 
-**Status:** Mandatory. Always loaded after FROTH-Core.
+All four have the same behavior:
 
-The standard library written in Froth itself. Defines every conventional stack word, control-flow combinator, and utility built on top of the FROTH-Core primitives.
+- stack effect: `( value slot -- )`
+- require a non-quotation value
+- stamp the slot with `(0 -- 1)` metadata
 
-**What it provides:**
-- Stack shuffle words: `dup`, `swap`, `drop`, `over`, `rot`, `-rot`, `nip`, `tuck`
-- Arithmetic stdlib: `negate`, `abs`
-- Control flow: `if`, `when`, `while` (wraps the primitive)
-- Combinators: `dip`, `keep`, `bi`, `times`, `set`
-- I/O stdlib: `cr`
+That makes them the right surface for constants, configuration, handles, and other slot-backed data:
 
-Readers of `core.froth` can see every definition. All words are plain Froth; no hidden C behind them.
-
-**Dependencies:** FROTH-Core.
-
----
-
-## FROTH-Named
-
-**Status:** Optional.
-
-Activates named stack bindings. When FROTH-Named is active, the names in a word's stack-effect comment become live variables inside the word's body. Each name, when used as a word, pushes its bound value onto the stack.
-
-**What it adds:**
-- Stack-effect comment names become bindings scoped to the word definition.
-- Binding order matches `perm` label convention: the last name in the input list is TOS, the first is deepest.
-- Named bindings work alongside explicit `perm` expressions; the two styles are freely mixed.
-
-**When to use:** Words that consume the same input more than once, or words with several inputs where tracking positions by label (`a`, `b`, `c`) becomes unwieldy. See the perm-vs-Named heuristic in the guide.
-
-**Example:**
 ```froth
-#profile FROTH-Named
-: hyp-squared ( a b -- n )
-  a a * b b * + ;
+34 'sensor-pin value
+2000 'alert-threshold value
+1000 'alert-threshold to
 ```
 
-**Dependencies:** FROTH-Core, FROTH-Base.
+For callable rebinding, use `is`:
 
----
+- stack effect: `( quote slot -- )`
+- requires a quotation
+- clears arity metadata
 
-## FROTH-Checked
+```froth
+[ 1 + ] 'hook is
+```
 
-**Status:** Optional.
+## CellSpace
 
-Adds runtime arity checking. When FROTH-Checked is active, calling a word with fewer stack values than its declared arity throws an error before the word body executes. Arity is declared with `arity!` or inferred from the stack-effect comment.
+Froth has a built-in mutable cell memory region, usually referred to as CellSpace.
 
-**What it adds:**
-- Stack-depth guard at each word call.
-- `arity!` primitive for manual arity annotation.
-- Clearer error messages on stack underflow: the error identifies the word that required more than was available.
+Use it when you need:
 
-**When to use:** Development and debugging, especially when learning. On production firmware with constrained RAM, consider removing FROTH-Checked from the build; the guards add overhead per call.
+- counters
+- arrays
+- framebuffers
+- lookup tables
+- mutable aggregate state
 
-**Dependencies:** FROTH-Core, FROTH-Base.
+CellSpace vocabulary:
 
----
+- `create ( slot -- )`
+- `allot ( n -- )`
+- `variable ( slot -- )`
+- `@ ( addr -- value )`
+- `! ( value addr -- )`
+- `cells ( n -- n )`
+- `cell+ ( addr -- addr' )`
+- `+! ( delta addr -- )`
 
-## FROTH-Region
+Key properties:
 
-**Status:** Optional.
+- CellSpace stores full tagged Froth cells, not raw bytes
+- addresses are cell indexes carried as numbers
+- `allot`, `create`, and `variable` are top-level defining words
+- newly allotted cells are zero-initialized
+- `@` and `!` are bounds-checked
 
-Extends the memory model with explicit region management beyond the basic `mark` / `release` pair. Provides named regions, region handles as first-class values, and region scope annotations.
+Example:
 
-**What it adds:**
-- Named region creation and lookup.
-- Region handles that can be stored in slots and passed to words.
-- Utilities for checking which region an allocation belongs to.
+```froth
+'counter variable
+0 counter !
+1 counter +!
+counter @
+```
 
-**When to use:** Long-running programs with multiple lifetime zones — e.g., a device that allocates per-connection state and needs to free it cleanly when the connection ends.
+## Build-Time Capabilities
 
-**Dependencies:** FROTH-Core.
+Some capabilities are selected at build time.
 
----
+### `froth.toml`
 
-## FROTH-Region-Strict
+The project manifest is the normal way to describe project-level expectations:
 
-**Status:** Optional.
+- `[target]` selects board and platform
+- `[build]` carries sizing/build overrides such as `cell_size`, `heap_size`, `slot_table_size`, `line_buffer_size`, `tbuf_size`, `tdesc_max`, and `ffi_max_tables`
+- `[ffi]` declares project-local C bindings with `sources`, `includes`, and `defines`
+- `[dependencies]` gives names to reusable Froth source files for `#use`
 
-Extends FROTH-Region with use-after-free detection. References to memory in a released region are validated at access time; a detected violation throws a Froth error rather than producing undefined behavior.
+### CMake
 
-**What it adds:**
-- Region generation counter; all live references carry the generation at allocation time.
-- Access words validate generation before dereferencing.
-- Significant runtime overhead compared to FROTH-Region alone.
+At the kernel level, the build surface is a set of CMake options. The main ones for application authors are:
 
-**When to use:** Debugging memory lifetime bugs. Not suitable for production firmware where access performance matters.
+- `FROTH_CELL_SIZE_BITS`
+- `FROTH_HEAP_SIZE`
+- `FROTH_SLOT_TABLE_SIZE`
+- `FROTH_DATA_SPACE_SIZE`
+- `FROTH_LINE_BUFFER_SIZE`
+- `FROTH_TBUF_SIZE`
+- `FROTH_TDESC_MAX`
+- `FROTH_FFI_MAX_TABLES`
+- `FROTH_HAS_SNAPSHOTS`
+- `FROTH_HAS_LIVE`
 
-**Dependencies:** FROTH-Core, FROTH-Region.
-
----
-
-## FROTH-String-Lite
-
-**Status:** Optional.
-
-Minimal string support: string literals, printing, length, and byte access. No comparison, no construction from runtime data.
-
-**What it adds:**
-- String literal syntax: `"..."` pushes a StringRef.
-- `s.emit ( s -- )`: print a string.
-- `s.len ( s -- n )`: string byte length.
-- `s@ ( s i -- n )`: byte access by index.
-
-**When to use:** Targets with very limited flash where full string support is too large, but print output using string literals is needed.
-
-**Dependencies:** FROTH-Core.
-
----
-
-## FROTH-String
-
-**Status:** Optional.
-
-Full string support. Superset of FROTH-String-Lite.
-
-**What it adds:** Everything in FROTH-String-Lite, plus:
-- `s.= ( s1 s2 -- flag )`: byte-for-byte string equality.
-- Additional string utilities (verify current set against implementation).
-
-**When to use:** Any target where string comparison or string-based dispatch is needed. The most common string profile for general embedded use.
-
-**Dependencies:** FROTH-Core, FROTH-String-Lite.
-
----
-
-## FROTH-REPL
-
-**Status:** Optional. Included in standard board builds; may be excluded from headless deployments.
-
-The interactive REPL — input parsing, word lookup by name, error reporting, and the prompt loop.
-
-**What it adds:**
-- Token scanner and word parser.
-- Numeric literal parser.
-- The `froth>` prompt and response cycle.
-- Error recovery: on uncaught throw, prints the error and returns to the prompt.
-- Introspection integration: `words`, `see`, `info` produce human-readable output.
-
-**When to use:** Any build where a developer needs to interact with the device over serial. Exclude from production headless builds to reclaim the parser and prompt overhead.
-
-**Dependencies:** FROTH-Core, FROTH-Base.
-
----
-
-## FROTH-Stdlib
-
-**Status:** Optional (recommended). Meta-profile that activates the full standard library combination.
-
-Enabling FROTH-Stdlib is equivalent to enabling FROTH-Base plus the optional stdlib extensions that are considered standard for general-purpose use.
-
-**What it adds:** The combined word set of FROTH-Base plus additional combinators and utility words not included in the mandatory base.
-
-**When to use:** General-purpose development where the application is not severely constrained. If uncertain, start with FROTH-Stdlib and remove profiles during a size-reduction pass.
-
-**Dependencies:** FROTH-Core, FROTH-Base.
-
----
-
-## FROTH-Perf
-
-**Status:** Optional.
-
-Enables performance-oriented variants of core operations. On targets that support it, substitutes C-inline implementations for hot paths that are otherwise compiled from Froth bytecode.
-
-**What it adds:**
-- Faster dispatch for frequently used words.
-- Optional inlining annotations that the compiler can act on.
-- No new words; no semantic changes. Code that works without FROTH-Perf works identically with it.
-
-**When to use:** Production firmware after correctness is established, on targets where interpreter throughput is the bottleneck. Profile first; FROTH-Perf has no effect on memory-bound or I/O-bound programs.
-
-**Dependencies:** FROTH-Core. Target support varies; check the board build configuration.
-
----
-
-## FROTH-Addr
-
-**Status:** Optional.
-
-Exposes direct memory address access and the return stack access words. Required for low-level hardware drivers and for words that manipulate the return stack intentionally.
-
-**What it adds:**
-- `>r ( a -- ) ( R: -- a )`: push data stack value to return stack.
-- `r> ( -- a ) ( R: a -- )`: pop return stack value to data stack.
-- `r@ ( -- a ) ( R: a -- a )`: copy return stack top to data stack.
-- Memory read/write at raw addresses (verify current word names against implementation).
-
-**When to use:** Board library code, hardware driver words, and any word that uses the return stack for temporary value storage (a common pattern in combinator implementations). Excluded from application code by default to prevent accidental return stack corruption.
-
-**Dependencies:** FROTH-Core. Some features require platform support.
+See the [Build Options](/reference/build-options/) page for variables and manifest keys.

@@ -12,7 +12,7 @@ froth> 42
 Stack: [42]
 ```
 
-The number `42` is now on the stack. The REPL shows you the stack state after every line, so you always know what you're working with.
+The number `42` is on the stack. The REPL shows you the stack state after every line, so you always know what you're working with.
 
 Push another number.
 
@@ -49,12 +49,12 @@ froth> words
 ... (a list of all defined words) ...
 ```
 
-`words` shows every word that exists in your current session. Right now, that's the built-in vocabulary. As you define your own words in later chapters, they'll appear in this list alongside the primitives.
+`words` shows every word that exists in your session. At first, that's the built-in vocabulary. As you define your own words in later chapters, they'll appear in this list alongside the primitives.
 
 ## What you just learned
 
 Every number you typed went onto the stack. Every word you typed did something with the stack. Numbers push values on. Words consume values, produce side effects, or both. `.s` showed you the stack without touching it. `.` showed you the top value and removed it. This is the entire model: values go on, words act on them, and the REPL shows you the result after every line.
 
-The stack is covered in depth in the next chapter. Word definitions come after that. For now, the thing to notice is the feedback loop. You typed something, and the response was immediate. There was no file to save, no build to run, no program to restart. The REPL is a conversation with the machine, and it answers on every line.
+The stack is covered in depth in the next chapter. Word definitions come after that. The thing to notice here is the feedback loop. You typed something, and the response was immediate. There was no file to save, no build to run, no program to restart. The REPL is a conversation with the machine, and it answers on every line.
 
 If the interaction feels unfamiliar, that's normal. The next chapter introduces arithmetic and shows how to read `3 4 +` one stack step at a time.

@@ -12,11 +12,15 @@ Plug in your ESP32, open the Froth REPL, and type this:
 
 The LED on the board lights up. You just wrote a voltage to a physical pin from a REPL prompt. Type `2 0 gpio.write` and the LED turns off. Every hardware interaction in this chapter works the same way: a word, a pin number, a value, an immediate result you can see.
 
+For exact stack effects, availability notes, and the board-facing API surface, use the [Hardware APIs reference](/reference/hardware/). This chapter stays focused on the workflow and the basic patterns.
+
 Before going further, verify your setup. You need an ESP32 DevKit connected over USB, VSCode open with the Froth extension, and the REPL active in the terminal panel. Type `123 .` and confirm it prints `123`. If the REPL is not responding, revisit the connection steps in chapter 00.
 
 GPIO words require real hardware. If you are using the local POSIX target, the words exist in the vocabulary but have no physical effect.
 
 ## GPIO: digital output
+
+Exact word documentation: [GPIO Reference](/reference/hardware/gpio/).
 
 Three words cover all digital pin operations.
 
@@ -252,42 +256,50 @@ Changing the frequency with `ledc.freq` lets you play melodies:
 
 ## I2C: talking to sensors
 
+Exact word documentation: [I2C Reference](/reference/hardware/i2c/).
+
 I2C is a two-wire bus protocol used by many sensors, displays, and peripherals. You connect the sensor's SDA and SCL lines to two GPIO pins, and Froth handles the protocol.
 
-**Initialize the bus:**
+There are two layers:
+
+- raw handle words such as `i2c.init`, `i2c.add-device`, and `i2c.read-reg`
+- board-lib helpers such as `i2c.setup`, `i2c.setup-fast`, `i2c.device`, and `i2c.device-fast`
+
+For most board code, start with the helpers.
+
+**Create a bus:**
 
 ```froth
-21 22 400000 i2c.init
-\ Stack: [bus]
+i2c.setup-fast 'bus value
 ```
 
-`i2c.init ( sda scl freq -- bus )` takes the SDA pin, SCL pin, and clock frequency in Hz. It returns a bus handle. GPIO 21 (SDA) and GPIO 22 (SCL) are the default I2C pins on most ESP32 DevKits. 400000 Hz (400 kHz) is the standard fast-mode speed.
+`i2c.setup-fast` uses the board's `SDA` and `SCL` constants, creates a 400kHz bus, and stores the handle in `bus`.
 
-**Add a device:**
+**Probe one address:**
 
 ```froth
-dup 104 400000 i2c.add-device
-\ Stack: [bus device]
+bus 104 i2c.probe .
+\ -1 if address 104 responds, 0 if not
 ```
 
-`i2c.add-device ( bus addr speed -- device )` registers a device on the bus at the given 7-bit address. Here, `104` (0x68) is the address of a common accelerometer (MPU-6050). The speed parameter sets the device's clock speed.
+`i2c.probe ( bus addr -- flag )` checks one 7-bit address. It does not perform a full bus scan by itself.
 
-**Probe for devices:**
+**Add a device handle:**
 
 ```froth
-i2c.probe
+bus 104 i2c.device 'device value
 ```
 
-`i2c.probe` scans the bus and reports which addresses respond. This is the first thing to try when wiring up a new sensor. If nothing responds, check your wiring and pull-up resistors.
+`i2c.device ( bus addr -- device )` registers a default-speed device on the bus. `i2c.device-fast` does the same at 400kHz.
 
 **Read and write:**
 
 ```froth
 device 117 i2c.read-reg .   \ read WHO_AM_I register (0x75)
-device 107 0 i2c.write-reg   \ write 0 to register 0x6B (wake up)
+0 device 107 i2c.write-reg  \ write 0 to register 0x6B (wake up)
 ```
 
-`i2c.read-reg` and `i2c.write-reg` handle single-byte register access. `i2c.read-byte` and `i2c.write-byte` send and receive raw bytes without specifying a register address.
+`i2c.read-reg` and `i2c.write-reg` handle single-byte register access. `i2c.read-byte` and `i2c.write-byte` send and receive raw bytes without specifying a register address. `i2c.read-reg16` reads a big-endian 16-bit value.
 
 A word that reads a temperature sensor and prints the value:
 

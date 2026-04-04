@@ -3,70 +3,141 @@ title: "Snapshots and Persistence"
 weight: 10
 ---
 
-You have spent the last few chapters building words, toggling pins, reading buttons. All of that lives in RAM. Unplug the USB cable and it vanishes. Every definition, every timing constant you tuned by hand, every word you tested and refined. Gone.
+You have spent the last few chapters building words, talking to hardware, and shaping a live session. All of that starts in RAM. Pull power and RAM disappears.
 
-This is normal for microcontrollers. RAM is volatile. But Froth gives you a way to write your session to flash memory, where it survives power loss. The mechanism is called a snapshot.
+Froth's answer is the snapshot system.
+
+A snapshot saves the **overlay** part of the live system so that the next boot can restore it before `autorun` runs. It includes slot bindings, heap objects, and the CellSpace image.
 
 ## What a snapshot captures
 
-A snapshot writes two things to flash: the heap and the slot table.
+A snapshot persists three things:
 
-The heap holds everything you have allocated during your session: word definitions (their quotation bodies), string literals, variables, and any other values created since boot. If you defined a word called `blink`, its definition lives on the heap and will be captured.
+1. **overlay slot bindings**  
+   The words and data slots you defined after boot.
+2. **reachable heap objects**  
+   Quotations, strings, patterns, and other persistable heap-backed values reachable from those overlay bindings.
+3. **the allocated CellSpace prefix**  
+   Mutable tagged cells allocated through `create`, `allot`, and `variable`.
 
-The slot table holds your word bindings. Each name you have defined is associated with a slot, and each slot points to the current definition of that word. The snapshot preserves these bindings so that after restore, `blink` still means what you defined it to mean.
+That means a saved session can restore:
 
-A snapshot does *not* capture:
+- new word definitions
+- slot-backed constants created with `value`
+- project state stored in variables and arrays
 
-- **The data stack.** After restore, the stack is empty.
-- **The return stack.** Also empty.
-- **Hardware register state.** If your program configured a GPIO pin as output, that configuration lives in the peripheral hardware, not in Froth's heap. After a power cycle, hardware must be re-initialized.
-- **In-progress computations.** If you were mid-expression when you called `save`, only the heap and slot table at that moment are captured. The computation is not resumable.
+## What a snapshot does not capture
 
-The short version: a snapshot saves your code, not your runtime state. Use it to persist definitions and structure, not to checkpoint a running program.
+Some runtime state is deliberately transient:
 
-## `save`, `restore`, and `snapshot-wipe`
+- the data stack
+- the return stack
+- in-flight execution
+- live console/daemon state
+- hardware peripheral configuration
+
+After restore, DS and RS are empty again. If your program needs GPIO or PWM configured, do that in `autorun` or in a setup word called by `autorun`.
+
+## `save`, `restore`, and `wipe`
+
+### `save`
 
 ```froth
 save
 ```
 
-`save` writes the current heap and slot table to non-volatile storage. On the ESP32, Froth uses NVS with dual-slot rotation: two snapshot slots, alternating writes, each protected by a CRC32 checksum. If power is lost mid-write, the previous snapshot remains intact. You will not corrupt the device into an unbootable state.
+Writes the overlay snapshot to snapshot storage.
+
+### `restore`
 
 ```froth
 restore
 ```
 
-`restore` loads the most recently saved snapshot, replacing the current session's heap and slot table. This happens automatically at boot. You can also call it manually to discard any changes made since the last `save` and return to the saved state.
+Resets the live system back to the base image, then overlays the most recently saved snapshot on top.
+
+You normally do not call `restore` by hand very often, because boot already tries it automatically.
+
+### `wipe`
 
 ```froth
-snapshot-wipe
+wipe
 ```
 
-`snapshot-wipe` erases both NVS snapshot slots. After a wipe, the next boot starts with a blank session. The standard library and board library still load; only your saved definitions are gone. Use this to start fresh or to recover from a snapshot that causes problems at boot.
+Erases both saved snapshot slots and immediately resets the device back to the base image.
+
+That base image includes:
+
+- the kernel primitives
+- the stdlib
+- board pins and board library, if present
+- any compiled-in user program
+- the base CellSpace state captured after those layers finish loading
+
+`wipe` is the "start from the built firmware again" command.
+
+## CellSpace and persistence
+
+CellSpace is a first-class part of persistence.
+
+If you write:
+
+```froth
+'counter variable
+0 counter !
+1 counter +!
+save
+```
+
+then the value stored in `counter` is part of the snapshot.
+
+The same is true for arrays and tables:
+
+```froth
+'rows create
+3 allot
+11 rows !
+22 rows cell+ !
+33 rows cell+ cell+ !
+save
+```
+
+After restore, those cells come back.
+
+This fits embedded state well because mutable data lives in a dedicated region and the snapshot model persists that region directly.
 
 ## The boot sequence
 
-When the board powers on, Froth follows a fixed sequence:
+The boot sequence is:
 
-1. The kernel initializes. Stack, heap, and slot table start empty.
-2. The standard library loads (`core.froth`). Words like `if`, `while`, `dip`, `catch`, and `throw` become available.
-3. The board library loads (`lib/board.froth`). Pin constants and hardware words (`LED_BUILTIN`, `BOOT_BUTTON`, `gpio.mode`, etc.) become available.
-4. Safe boot check. For 750 milliseconds, Froth watches for a Ctrl-C over serial or a press of the BOOT button. If either is detected, it skips steps 5 and 6.
-5. Snapshot restore. If a saved snapshot exists, the heap and slot table are loaded. Your definitions come back.
-6. `autorun`. If a word named `autorun` is defined, it is called.
-7. The REPL starts.
+1. register kernel primitives
+2. register board FFI
+3. register project FFI, if the build has it
+4. register snapshot words, if snapshots are enabled
+5. initialize the platform and transient buffers
+6. initialize CellSpace
+7. load the stdlib
+8. load generated board pins and `lib/board.froth`, if present
+9. capture the base CellSpace image and heap watermark
+10. open the safe-boot window
+11. if safe boot was not requested:
+    - try `restore`
+    - if no snapshot was restored and a compiled user program exists, load that base program
+    - attempt `[ 'autorun call ] catch drop drop`
+12. start the live console / REPL
 
-Step 6 is the key detail: `autorun` runs *before* the REPL prompt appears. A device with a saved `autorun` word boots into your program without a computer attached.
+The consequences are:
 
-## `autorun`: making a standalone device
+- board and project FFI are available before restore
+- snapshots overlay the base image rather than replacing it
+- `autorun` runs after restore, not before
+- if no snapshot exists, the compiled user program becomes the base boot content
 
-Define a word named `autorun`, save a snapshot, and the device will run that word every time it powers on.
+## `autorun`
+
+Define a word named `autorun` and save a snapshot:
 
 ```froth
-: blink ( delay -- )
-  LED_BUILTIN 1 gpio.write dup ms
-  LED_BUILTIN 0 gpio.write ms ;
-
 : autorun ( -- )
   LED_BUILTIN 1 gpio.mode
   [ true ] [ 500 blink ] while ;
@@ -74,124 +145,101 @@ Define a word named `autorun`, save a snapshot, and the device will run that wor
 save
 ```
 
-Unplug the board. Plug it back in. The LED starts blinking immediately, with no serial connection needed.
+Now the next boot restores the snapshot and calls `autorun` before the prompt appears.
 
-Because `autorun` runs before the REPL, programs that should run indefinitely need an infinite loop. If `autorun` returns, the REPL starts normally. For a standalone device, `[ true ] [ ... ] while` keeps the program running.
+Because `autorun` is called under `catch`, an error in `autorun` does not permanently destroy the session. But a broken `autorun` can still make a normal boot unusable, which is why safe boot exists.
 
-To change the device's behavior later, connect to the REPL, redefine `autorun`, and `save` again. To remove it entirely, define a no-op version and save:
+## Safe boot
 
-```froth
-: autorun ( -- ) ;
-save
+Safe boot uses **Ctrl-C during the boot window**.
+
+On boot, Froth prints:
+
+```text
+boot: CTRL-C for safe boot
 ```
 
-Or use `snapshot-wipe` to clear all saved state.
+It then waits for about 750 milliseconds. If Ctrl-C arrives during that window, Froth:
 
-Here is a slightly more involved example. This `autorun` mirrors the BOOT button state to the LED, running the device as a simple button-controlled light:
+- skips `restore`
+- skips `autorun`
+- starts from the base image only
+
+That gives you a clean path back into the system if a saved `autorun` has gone bad.
+
+The BOOT button is unrelated to this path. Safe boot is the serial Ctrl-C window during startup.
+
+## `wipe` vs compiled user programs
+
+Manifest-driven builds embed your resolved project source into the firmware as a base user program.
+
+That means:
+
+- a fresh boot with no snapshot loads the compiled program
+- a saved snapshot overlays on top of that base
+- `wipe` removes the saved overlay and returns you to the compiled base program
+
+The base image can include more than stdlib.
+
+## Heap `mark` and `release`
+
+`mark` and `release` still exist for temporary heap experiments during a live session.
 
 ```froth
+mark
+\ experiment here
+release
+```
+
+That mechanism is separate from snapshots:
+
+- `mark` / `release` are live-session memory control
+- `save` / `restore` / `wipe` are persistence control
+
+## What will prevent `save`
+
+`save` only works for persistable values.
+
+Common cases that can block it:
+
+- transient strings that have not been promoted
+- values that the snapshot writer cannot serialize safely
+- snapshot size limits on the target
+
+If `save` fails, fix the offending live state and try again. The existing snapshot remains intact because the save path writes to the inactive snapshot slot first.
+
+## A complete workflow
+
+Build a word, store some state, and make it survive reboot:
+
+```froth
+'press-count variable
+0 press-count !
+
+: on-press ( -- )
+  1 press-count +!
+  "Press #" s.emit press-count @ . cr ;
+
 : autorun ( -- )
-  LED_BUILTIN 1 gpio.mode
   BOOT_BUTTON 0 gpio.mode
   [ true ] [
-    BOOT_BUTTON gpio.read not
-    LED_BUILTIN swap gpio.write
-    10 ms
+    BOOT_BUTTON gpio.read 0 = [ on-press ] when
+    50 ms
   ] while ;
 
 save
 ```
 
-## Safe boot: the escape hatch
+Power-cycle the device. The variable state and the word definitions come back. `autorun` runs from the restored snapshot.
 
-An `autorun` with a bug can make the device appear dead. If the word throws an error or enters an infinite loop before the REPL starts, you cannot type anything to fix it.
-
-The recovery path is safe boot. Hold the BOOT button (or send Ctrl-C over serial) within 750 milliseconds of power-on. Froth skips the snapshot restore and the `autorun` hook entirely. The board boots into a clean session with only the standard library and board library loaded.
-
-From the safe-boot session, you can fix the problem:
-
-```froth
-\ Option 1: redefine autorun and save
-: autorun ( -- )
-  "device is up" s.emit cr ;
-save
-
-\ Option 2: wipe everything and start fresh
-snapshot-wipe
-```
-
-Safe boot does not erase the saved snapshot. It only skips loading it. If you boot normally again without saving or wiping, Froth will try to load the old snapshot. Fix the problem or wipe before you power-cycle.
-
-## Heap management with `mark` and `release`
-
-During long REPL sessions, you may define temporary words that you do not want to keep. Froth provides a pair of words for deterministic memory reclamation.
-
-```froth
-mark
-\ m is now on the stack
-
-: scratch ( -- ) "temporary" s.emit cr ;
-: experiment ( -- ) 42 . ;
-
-\ Done experimenting. Release everything allocated since the mark.
-release
-\ scratch and experiment are gone; heap is back to where it was
-```
-
-`mark` pushes a heap watermark onto the stack. `release` takes that watermark and frees everything allocated after it. Any words you defined between `mark` and `release` are gone, along with any strings or values they allocated.
-
-This is useful when you are exploring at the REPL and want to clean up without wiping your entire session. Define a `mark` before you start experimenting, and `release` when you are done.
-
-## A complete workflow
-
-Here is the full develop-save-verify cycle, from scratch to standalone device:
-
-```froth
-\ 1. Define and test your words
-: blink ( delay -- )
-  LED_BUILTIN 1 gpio.write dup ms
-  LED_BUILTIN 0 gpio.write ms ;
-
-LED_BUILTIN 1 gpio.mode
-500 blink
-\ LED blinks once. Good.
-
-\ 2. Define autorun
-: autorun ( -- )
-  LED_BUILTIN 1 gpio.mode
-  [ true ] [ 500 blink ] while ;
-
-\ 3. Save to flash
-save
-
-\ 4. Unplug the board. Plug it back in.
-\    The LED blinks immediately at boot.
-
-\ 5. Reconnect to the REPL and verify.
-info
-\ Your definitions are still present.
-```
-
-Save periodically during long sessions. A power interruption costs you everything since the last `save`.
-
-When iterating on `autorun`, test it manually first by calling `autorun` at the REPL. If the behavior looks right, `save` and power-cycle to confirm the boot behavior.
-
-## Non-persistable values
-
-Not everything on the heap can be written to flash. Native addresses (C pointers) and certain transient strings cannot be serialized. If your session contains non-persistable values, `save` will fail and report which values caused the problem.
-
-In practice, this is rare. Word definitions, numbers, strings you created at the REPL, and quotations are all persistable. The restriction mainly affects low-level interop with C libraries. If you hit it, the error message will tell you what to remove before saving.
+If that boot goes wrong, send Ctrl-C during the safe-boot window, fix the program, then `save` again or `wipe`.
 
 ## Exercises
 
-**Save and verify.** Define a word at the REPL: `: hello ( -- ) "hello from flash" s.emit cr ;`. Run `save`. Power-cycle the board. Reconnect and type `hello`. Did it survive?
+**Persist a variable.** Define `'counter variable`, store a number with `!`, call `save`, reboot, and confirm `counter @` still returns that value.
 
-**Simple autorun.** Define `autorun` to print a startup message: `: autorun ( -- ) "Froth is running" s.emit cr ;`. Save and power-cycle. Confirm the message appears before the REPL prompt.
+**Persist an array.** Use `create`, `allot`, `!`, and `cell+` to store three numbers in CellSpace. Save, reboot, and read them back with `@`.
 
-**Autorun with hardware.** Define `autorun` to blink the LED three times at boot, then print a ready message and return (so the REPL starts normally after the blinks).
+**Compiled base vs snapshot overlay.** Build a project with an `autorun`, then redefine `autorun` live and `save`. Confirm that `wipe` returns the board to the compiled base behavior.
 
-**Safe boot recovery.** Define an `autorun` that deliberately throws an error: `: autorun ( -- ) 99 throw ;`. Save and power-cycle. Use safe boot to recover. Redefine `autorun` to something harmless and save.
-
-**Wipe and restart.** Call `snapshot-wipe`, then power-cycle. Confirm that the previous `autorun` no longer runs and the session starts clean.
-
-**Mark and release.** Run `mark`, define two or three temporary words, test them, then `release`. Verify the words are no longer defined.
+**Safe boot recovery.** Save a bad `autorun`, reboot, send Ctrl-C during `boot: CTRL-C for safe boot`, and repair or wipe the saved overlay.

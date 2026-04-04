@@ -80,7 +80,7 @@ You should see a stream of numbers scrolling past. Turning the potentiometer cha
 ## Step 3 — Define a named read word
 
 ```froth
-froth> 34 'sensor-pin def
+froth> 34 'sensor-pin value
 
 froth> : read-sensor ( -- count )
 ...     sensor-pin adc.read ;
@@ -189,7 +189,7 @@ Turn the potentiometer past the threshold and the LED lights. Turn it back down 
 Make the threshold a named value:
 
 ```froth
-froth> 2000 'alert-threshold def
+froth> 2000 'alert-threshold value
 
 froth> : check-threshold ( mv -- mv )
 ...     dup alert-threshold >
@@ -201,7 +201,7 @@ froth> : check-threshold ( mv -- mv )
 Change the threshold at any time:
 
 ```froth
-froth> 1000 'alert-threshold def
+froth> 1000 'alert-threshold to
 ```
 
 The next call to `check-threshold` uses the new value. Coherent redefinition at work.
@@ -223,8 +223,8 @@ Power-cycle the board. The sensor loop starts immediately.
 
 ```froth
 \ Sensor constants
-34 'sensor-pin def
-2000 'alert-threshold def
+34 'sensor-pin value
+2000 'alert-threshold value
 
 \ Hardware
 : setup ( -- )
@@ -270,6 +270,6 @@ Each word does one thing. `sensor-loop` composes them. This is how Froth program
 - **`adc.read ( pin -- count )`** reads a 12-bit ADC value (0-4095). The ADC measures voltage on analog-capable pins.
 - **Integer calibration math:** `counts->mv` converts raw counts to millivolts using `*` and `/mod`. `nip` discards the remainder and keeps the quotient.
 - **Continuous loops with `while`:** `[ true ] [ body ] while` is the infinite monitoring loop pattern.
-- **Named constants with `def`:** `34 'sensor-pin def` and `2000 'alert-threshold def` make the program configurable without touching word definitions.
+- **Named constants with `value` / `to`:** `34 'sensor-pin value` and `2000 'alert-threshold value` make the program configurable without touching word definitions.
 - **`dup` before branching:** when you need a value for both the test and the output, `dup` it before the comparison.
 - **Composing hardware words:** `check-threshold` combines a comparison with GPIO output, taking one value and returning the same value unchanged.

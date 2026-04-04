@@ -1,6 +1,6 @@
 ---
 title: "VSCode Extension Reference"
-weight: 4
+weight: 6
 ---
 
 The Froth VSCode extension is a thin front end over the Froth CLI and daemon. It gives you editor syntax support, device and local-target connection commands, send commands, a small device sidebar, and a live console.
@@ -37,7 +37,7 @@ By default it looks for `froth` on `PATH`. If it cannot find it, commands fail w
 
 ## Commands
 
-These are the commands actually contributed by the current extension:
+These are the commands contributed by the extension:
 
 | Command Palette entry | What it does |
 |---|---|
@@ -52,7 +52,7 @@ These are the commands actually contributed by the current extension:
 | `Froth: Wipe Snapshots` | Evaluates `wipe` on the active target. |
 | `Froth: Refresh Device Info` | Refreshes daemon status and the sidebar view. |
 
-Notably absent from the current extension:
+Notably absent from the extension:
 
 - no `Select Port` command
 - no `Restore Snapshot` command
@@ -67,7 +67,7 @@ Use **Froth: Connect Device**.
 
 The extension ensures a Froth daemon is running in serial mode, connects through the daemon socket, and then requests target info. If the daemon is running but no board is attached, VSCode shows a warning that no device is connected.
 
-There is no manual port picker in the current extension UI. Port selection and discovery are handled by the CLI and daemon layer.
+There is no manual port picker in the extension UI. Port selection and discovery are handled by the CLI and daemon layer.
 
 ### Local POSIX
 
@@ -116,7 +116,7 @@ If the target requests input, the extension opens a VSCode input box. It accepts
 
 ## Sidebar
 
-The Froth activity-bar view currently exposes a single **Device** tree view.
+The Froth activity-bar view exposes a single **Device** tree view.
 
 When connected, it shows these fields:
 
@@ -138,7 +138,7 @@ The title bar for that view exposes commands for:
 - wipe snapshots
 - run doctor
 
-The sidebar does not currently provide:
+The sidebar does not provide:
 
 - a disconnect button
 - a restore button
@@ -150,7 +150,7 @@ The sidebar does not currently provide:
 
 The extension uses a Froth status item plus a separate interrupt item when the target is running.
 
-These are the actual status texts used by the current code:
+These are the status texts used by the extension:
 
 | Status bar text | Meaning |
 |---|---|
@@ -179,14 +179,14 @@ There is no user-facing setting in the extension for overriding the daemon socke
 
 ## Settings
 
-The current extension contributes only two settings:
+The extension contributes two settings:
 
 | Setting | Type | Default | Description |
 |---|---|---|---|
 | `froth.cliPath` | string | `""` | Absolute path to the Froth CLI binary. |
 | `froth.localRuntimePath` | string | `""` | Absolute path to the local POSIX Froth runtime used by Try Local. |
 
-If `froth.cliPath` is empty, the implementation currently searches only for `froth` on `PATH`.
+If `froth.cliPath` is empty, the implementation searches only for `froth` on `PATH`.
 
 ## Doctor
 
@@ -198,11 +198,9 @@ froth doctor
 
 Use this first when the extension cannot find the CLI, cannot start the daemon, or cannot connect to a board.
 
-## Current Limits
+## Limits
 
-If you are comparing this page with older drafts, the current extension is simpler than those drafts suggested.
-
-In particular, the shipped implementation does not currently include:
+The shipped implementation does not include:
 
 - manual serial port selection
 - restore snapshot support

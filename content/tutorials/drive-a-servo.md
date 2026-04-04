@@ -42,7 +42,7 @@ A standard hobby servo has three wires:
 ## Step 1 — Move to a position
 
 ```froth
-froth> 13 'servo-pin def
+froth> 13 'servo-pin value
 froth> servo-pin 90 servo.write
 ```
 
@@ -134,7 +134,7 @@ Half a second of stillness at each extreme. Redefine and call again.
 Wire a potentiometer to GPIO 34 (same setup as [Read a Sensor](read-a-sensor.md)). Map the ADC range (0-4095) to servo degrees (0-180):
 
 ```froth
-froth> 34 'pot-pin def
+froth> 34 'pot-pin value
 
 froth> : read-angle ( -- degrees )
 ...     pot-pin adc.read 180 * 4095 / ;
@@ -157,9 +157,9 @@ The entire program is four words, each one line long.
 Define named positions and switch between them:
 
 ```froth
-froth> 0   'pos-left def
-froth> 90  'pos-center def
-froth> 180 'pos-right def
+froth> 0   'pos-left value
+froth> 90  'pos-center value
+froth> 180 'pos-right value
 
 froth> : left    pos-left servo ;
 froth> : center  pos-center servo ;
@@ -178,5 +178,5 @@ The REPL reads like English: `left`, `center`, `right`. Redefine the angles to f
 - **Servos vs. DC motors:** servos move to an angle and stay. DC motors spin continuously. Different tools for different jobs.
 - **Smooth sweeps:** increment the angle by 1 in a loop with a delay between each step. Same pattern as `fade-up` / `fade-down`.
 - **Input-to-output mapping:** `read-angle` scales ADC counts to degrees. The same scaling pattern works any time you connect a sensor to an actuator.
-- **Named presets with `def`:** give positions meaningful names. The REPL becomes a command vocabulary for your hardware.
+- **Named presets with `value`:** give positions meaningful names. The REPL becomes a command vocabulary for your hardware.
 - **Live redefinition:** change `patrol` behavior by redefining the word. The servo responds immediately.

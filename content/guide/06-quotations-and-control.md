@@ -236,7 +236,7 @@ Result: `[11]`. The quotation `[ 3 + ]` was applied twice: 5 + 3 + 3 = 11.
 
 ## Quotations and words are the same thing
 
-There is one more connection worth making explicit. When you write `: double 2 * ;`, the colon-semicolon form is shorthand for `[ 2 * ] 'double def`. Every word definition is a quotation stored in a slot. Every word call is a slot lookup followed by what amounts to `call`.
+There is one more connection worth making explicit. When you write `: double 2 * ;`, the colon-semicolon form is shorthand for `'double [ 2 * ] def`. Every word definition is a quotation stored in a slot. Every word call is a slot lookup followed by what amounts to `call`.
 
 This means a named word and an anonymous quotation are the same kind of thing from the runtime's perspective. The only difference is whether the quotation has been bound to a name. You can factor a word by extracting part of its body into a named helper, or you can leave it as an anonymous quotation passed to a combinator. Both are normal Froth style, and the choice depends on whether the extracted piece deserves a name.
 

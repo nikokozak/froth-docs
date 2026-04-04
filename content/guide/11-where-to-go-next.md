@@ -5,13 +5,13 @@ weight: 11
 
 You have a working vocabulary, a board that runs your code at boot, and a REPL you can reconnect to at any time. The core guide is done.
 
-If you want to keep going, the advanced section starts with [FFI and C Integration](/guide/12-ffi-and-c/). The Advent of Code case studies now live under [Tutorials](/tutorials/), where they fit better as full worked examples. If you would rather branch out, here is where to find everything else.
+If you want to keep going, the advanced section starts with [FFI and C Integration](/guide/12-ffi-and-c/). The Advent of Code case studies live under [Tutorials](/tutorials/), where they fit better as full worked examples. If you would rather branch out, here is where to find everything else.
 
 ## Reference
 
 The [reference section](/reference/) is the companion to daily Froth use. It contains the complete word list with stack signatures, descriptions, and usage examples for every word. When you cannot remember whether it is `s.len` or `s.length`, the reference has the answer.
 
-The reference also covers the [Froth CLI](/reference/cli/), the [VSCode extension](/reference/vscode/), and the [platform profiles](/reference/profiles/).
+The reference also covers the [Hardware APIs](/reference/hardware/), the [FFI](/reference/ffi/), the [Froth CLI](/reference/cli/), the [VSCode extension](/reference/vscode/), and the [capability model](/reference/profiles/).
 
 ## Tutorials
 
@@ -29,9 +29,9 @@ The [features page](/what-makes-froth-different/) makes the technical case for F
 
 ## Source code and contributing
 
-Froth is open source. The repository contains the runtime, the standard library, and the board support packages. A few files worth reading:
+Froth is open source. The repository contains the runtime, the standard library, and the board support packages. A few useful files:
 
-- `core.froth` is the entire standard library. Every standard word is defined in plain Froth using a small set of primitives. It is readable and worth studying.
+- `core.froth` is the entire standard library. Every standard word is defined in plain Froth using a small set of primitives.
 - `lib/board.froth` for your board is the hardware abstraction layer, mapping pin names and peripheral access to Froth words.
 
 If you have found a bug, want to add a board target, or want to improve the documentation, see `CONTRIBUTING.md` in the repository for how to get started.
