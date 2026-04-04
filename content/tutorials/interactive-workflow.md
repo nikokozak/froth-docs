@@ -97,12 +97,12 @@ Build it this way instead:
 : above-threshold? ( mv -- flag )
   2000 > ;
 \ Test: 1000 above-threshold? .  → 0
-\       3000 above-threshold? .  → 1
+\       3000 above-threshold? .  → -1
 
 \ Layer 4: alert
 : set-alert-led ( flag -- )
-  LED_BUILTIN swap gpio.write ;
-\ Test: 1 set-alert-led  → LED on
+  1 0 choose LED_BUILTIN swap gpio.write ;
+\ Test: -1 set-alert-led  → LED on
 \       0 set-alert-led  → LED off
 
 \ Layer 5: compose
@@ -308,10 +308,10 @@ froth> pressed? .
 0
 froth> \ hold button
 froth> pressed? .
-1
+-1
 ```
 
-Returns `1` (true) when pressed. The `0 =` inverts the active-low logic.
+Returns `-1` (true) when pressed. The `0 =` comparison inverts the active-low logic.
 
 ### Minutes 5-8: build the count logic
 
@@ -326,7 +326,7 @@ Back to the file:
   "Press " s.emit press-count @ . cr ;
 
 : wait-for-press ( -- )
-  [ pressed? not ] [ 10 ms ] while
+  [ pressed? 0 = ] [ 10 ms ] while
   [ pressed? ] [ 10 ms ] while ;
 ```
 
@@ -353,7 +353,7 @@ Add to the file:
 : button-counter ( -- )
   BOOT_BUTTON 0 gpio.mode
   0 press-count !
-  [ true ] [ wait-for-press on-press ] while ;
+  [ -1 ] [ wait-for-press on-press ] while ;
 ```
 
 Send with Cmd+Enter. Test:

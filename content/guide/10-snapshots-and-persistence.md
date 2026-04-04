@@ -140,7 +140,7 @@ Define a word named `autorun` and save a snapshot:
 ```froth
 : autorun ( -- )
   LED_BUILTIN 1 gpio.mode
-  [ true ] [ 500 blink ] while ;
+  [ -1 ] [ 500 blink ] while ;
 
 save
 ```
@@ -222,8 +222,8 @@ Build a word, store some state, and make it survive reboot:
 
 : autorun ( -- )
   BOOT_BUTTON 0 gpio.mode
-  [ true ] [
-    BOOT_BUTTON gpio.read 0 = [ on-press ] when
+  [ -1 ] [
+    BOOT_BUTTON gpio.read 0 = [ on-press ] [ ] if
     50 ms
   ] while ;
 

@@ -1,14 +1,14 @@
 ---
 title: "Hardware APIs"
 weight: 2
-description: "Board and platform words such as GPIO, I2C, and UART."
+description: "Board and platform words such as GPIO, I2C, UART, and timing."
 ---
 
 This section covers target-facing APIs.
 
 Use it for words that depend on board or platform support rather than the core VM or stdlib:
 
-- raw board or platform FFI words such as `gpio.mode`, `i2c.init`, and `uart.read`
+- raw board or platform FFI words such as `gpio.mode`, `i2c.init`, `uart.read`, and `ms`
 - board-lib convenience words such as `i2c.setup`, `i2c.device`, `uart.setup`, and `uart.type`
 - availability notes for hardware targets and the local POSIX target
 

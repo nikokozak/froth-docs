@@ -4,9 +4,13 @@ aliases:
   - /guide/00-installation/
 ---
 
-Froth is still in development. Direct downloads and a simpler install flow will be available soon.
+Froth is still in development. Direct downloads and a simpler public install flow will be available soon.
 
-For now, this page documents the fallback path: build the CLI from the repo, point the editor at it, and connect to hardware or the local POSIX target.
+This page is not the public installation guide for Froth.
+
+It is a reference page for pre-alpha Froth developers: people working from the repository, testing the tooling early, or contributing to the language and board support.
+
+The instructions below document the pre-alpha fallback path: build the CLI from the repo, point the editor at it, and connect to hardware or the local POSIX target.
 
 You need two things: the Froth CLI and the VSCode extension. If you have an ESP32 board, you can work directly on hardware. If you do not, the CLI also supports a local POSIX target that runs Froth on your computer. Either way, the goal is the same: get to a `froth>` prompt quickly.
 
@@ -35,7 +39,7 @@ The local target is not a simulator. It is a real Froth session running on your 
 
 Packaged downloads are not the main install path yet. They will be published once the tooling and distribution flow settle down.
 
-Until then, use the repo-local build below.
+Until then, this section exists only as a pre-alpha developer reference. End-user installation is not the intended path here.
 
 ### Fallback: build from the repo
 
@@ -66,7 +70,7 @@ If it prints usage information, the CLI built successfully.
 
 ## Install the VSCode extension
 
-The extension is in the same stage as the CLI: a packaged download path is coming, but the repo-local path is the reliable fallback today.
+The extension is in the same stage as the CLI: a packaged download path is coming, but the repo-local path is the reliable fallback for pre-alpha developers.
 
 If you have a packaged Froth extension from an internal or pre-release flow, install that in VSCode. For repo-local development, the extension source lives under `tools/vscode/`.
 

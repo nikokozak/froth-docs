@@ -104,7 +104,7 @@ The servo pans smoothly across its range. `step-ms` controls the speed: `5` is f
 
 ```froth
 froth> : patrol ( step-ms -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       dup sweep-up
 ...       dup sweep-down
 ...     ] while
@@ -119,7 +119,7 @@ Redefine with a pause at each end:
 
 ```froth
 froth> : patrol ( step-ms -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       dup sweep-up   500 ms
 ...       dup sweep-down  500 ms
 ...     ] while
@@ -140,7 +140,7 @@ froth> : read-angle ( -- degrees )
 ...     pot-pin adc.read 180 * 4095 / ;
 
 froth> : knob-servo ( -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       read-angle servo
 ...       20 ms
 ...     ] while ;

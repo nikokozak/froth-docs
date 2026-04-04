@@ -21,7 +21,7 @@ These are part of the normal language surface:
 - arithmetic, comparison, bitwise, strings, control flow, and error handling
 - the REPL-oriented introspection words such as `see`, `words`, and `info`
 
-The standard library in `src/lib/core.froth` is also loaded automatically. Words such as `dup`, `swap`, `if`, `when`, `dip`, `keep`, `bi`, `times`, `negate`, `abs`, `cells`, `cell+`, and `+!` are ordinary Froth definitions, not hidden VM magic.
+The standard library in `src/lib/core.froth` is also loaded automatically. Words such as `dup`, `swap`, `if`, `dip`, `keep`, `bi`, `times`, `try`, `negate`, `abs`, `cells`, `cell+`, and `+!` are ordinary Froth definitions, not hidden VM magic.
 
 ## Named Inputs
 

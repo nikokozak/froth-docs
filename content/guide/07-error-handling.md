@@ -55,32 +55,33 @@ There is one special case: `0 throw` does nothing. Throwing zero is defined as "
 0 throw   \ nothing happens
 ```
 
-This convention enables a compact pattern for conditional errors. If you have a flag and an error code, multiplying them together produces either the code (when the flag is nonzero) or zero (when it is not):
+The usual pattern is to compute a flag and branch into `throw` only when it is true:
 
 ```froth
 : check-positive ( n -- n )
-  dup 0 < 42 * throw ;
+  dup 0 < [ 42 throw ] [ ] if ;
 ```
 
-If `n` is negative, `0 <` produces a truthy value, the multiplication yields 42, and `throw` signals the error. If `n` is zero or positive, the multiplication yields zero, and `throw` is a no-op.
+If `n` is negative, `0 <` produces a truthy flag and the first branch throws 42. If `n` is zero or positive, the empty branch runs and the original `n` stays on the stack.
 
 ## `catch`: protecting a quotation
 
-`catch ( q -- ... 0 | e )` takes a quotation, runs it, and intercepts any error that occurs inside it.
+`catch ( q -- ... ecode flag )` takes a quotation, runs it, and intercepts any error that occurs inside it.
 
-When the quotation completes without error, `catch` pushes `0` on top of whatever the quotation left on the stack:
+When the quotation completes without error, `catch` pushes `0` and then `-1` on top of whatever the quotation left on the stack:
 
 ```froth
 [ 3 4 + ] catch
-\ Stack: [7 0]
+\ Stack: [7 0 -1]
 ```
 
-The `7` is the quotation's result. The `0` means no error. You need to consume the error code before you can work with the result.
+The `7` is the quotation's result. The `0` is the error code, and `-1` is the success flag.
 
-When the quotation throws an error, `catch` restores the data stack to the state it had when `catch` was entered and pushes the error code:
+When the quotation throws an error, `catch` restores the data, return, and control stacks to the state they had when `catch` was entered and pushes the error code followed by `0`:
 
 ```froth
-[ 1 0 /mod ] catch .
+\ [ 1 0 /mod ] restores to the pre-catch stack, so only the status remains
+[ 1 0 /mod ] catch drop .
 \ prints: 5
 ```
 
@@ -89,10 +90,10 @@ Here is the full trace:
 1. `[ 1 0 /mod ]` pushes the quotation.
 2. `catch` saves the current stack state and runs the quotation.
 3. Inside the quotation: `1` pushes, `0` pushes, `/mod` attempts division by zero and throws error code 5.
-4. `catch` intercepts the throw. It restores the stack to its state before the quotation ran (empty, in this case) and pushes the error code `5`.
-5. `.` prints `5`.
+4. `catch` intercepts the throw. It restores the stack to its state before the quotation ran (empty, in this case) and pushes `5 0`.
+5. `drop` removes the failure flag `0`. `. ` prints `5`.
 
-The stack restoration matters. If the quotation pushed several values before throwing, `catch` cleans them all up. You always know what the stack looks like after `catch` returns: either the quotation's results followed by `0`, or the pre-quotation stack with just the error code on top.
+The stack restoration matters. If the quotation pushed several values before throwing, `catch` cleans them all up. You always know what the stack looks like after `catch` returns: either the quotation's results followed by `0 -1`, or the pre-quotation stack with `ecode 0` on top.
 
 ## `try`: when you only need the flag
 
@@ -102,28 +103,30 @@ The stack restoration matters. If the quotation pushed several values before thr
 : try ( q -- ... flag )  catch swap drop ;
 ```
 
-It runs the quotation under `catch`, then drops the error code and keeps only the success flag. After `try`, the top of the stack is `0` if the quotation succeeded and a nonzero error code if it failed. The difference from `catch` is that `try` discards any intermediate results the quotation may have left on the stack when it errors, giving you a simpler interface when you only care about whether something worked.
+It runs the quotation under `catch`, then drops the error code and keeps only the success flag. After `try`, the top of the stack is `-1` if the quotation succeeded and `0` if it failed. The difference from `catch` is that `try` keeps only the success/failure status, which is often the simplest surface when you only care whether something worked.
 
 ## Practical patterns
 
 ### Branching on success or failure
 
-The most common pattern: run a quotation under `catch`, then branch on the error code.
+The most common pattern: run a quotation under `catch`, then branch on the success flag.
 
 ```froth
 [ risky-operation ] catch
-dup 0 = [ drop  handle-success ] [ handle-error ] if
+[ drop handle-success ] [ handle-error ] if
 ```
 
-If the error code is `0`, drop it and proceed with the results. If nonzero, handle the failure. Here is a concrete version that attempts division and falls back to a default:
+`if` consumes the flag that `catch` left on top. In the success branch, the stack still includes the zero error code, so drop it before using the results. In the failure branch, the stack has been restored and the error code is on top.
+
+Here is a concrete version that attempts division and falls back to a default:
 
 ```froth
 : safe-divide ( a b -- n )
   [ /mod drop ] catch
-  dup 0 = [ drop ] [ drop drop -1 ] if ;
+  [ drop ] [ drop drop drop -1 ] if ;
 ```
 
-If the division succeeds, the quotient is below the `0` error code. `drop` removes the zero and leaves the quotient. If division fails (because `b` was zero), `catch` restores the stack to `[a b]` and pushes the error code. The error branch drops the error code, drops both original values, and pushes `-1` as a sentinel.
+If the division succeeds, the quotient is below the `0 -1` status pair. `if` consumes the `-1`, the success branch drops the zero error code, and the quotient remains. If division fails, `catch` restores the stack to `[a b]`, pushes the error code, then `0`. The failure branch drops the error code and both original inputs, then pushes `-1` as a sentinel.
 
 ### Rethrowing errors you cannot handle
 
@@ -131,10 +134,10 @@ If `catch` intercepts an error you did not expect, rethrow it so an outer handle
 
 ```froth
 [ some-operation ] catch
-dup 0 = [ drop ] [ throw ] if
+[ drop ] [ throw ] if
 ```
 
-If no error occurred, drop the zero and continue. If an error occurred, `throw` it again. The error propagates upward to the next `catch` or, ultimately, to the REPL handler.
+If no error occurred, drop the zero error code and continue. If an error occurred, `throw` it again. The error propagates upward to the next `catch` or, ultimately, to the REPL handler.
 
 ### Nested catch blocks
 
@@ -143,12 +146,15 @@ If no error occurred, drop the zero and continue. If an error occurred, `throw` 
 ```froth
 [
   [ 10 0 /mod ] catch
-  dup 5 = [ drop 0 ] [ throw ] if
-] catch .
+  [ drop ]
+  [ dup 5 = [ drop 0 ] [ throw ] if ]
+  if
+] catch
+[ drop . ] [ . ] if
 \ prints: 0
 ```
 
-The inner `catch` intercepts the division-by-zero error (code 5). It recognizes the code, drops it, and pushes `0` as a fallback value. The outer `catch` never sees an error because the inner one handled it. It pushes `0` (no error), which `.` prints.
+The inner `catch` intercepts the division-by-zero error (code 5). Its failure branch recognizes the code, drops it, and pushes `0` as a fallback value. The outer `catch` never sees an error because the inner one handled it. It reports success, the success branch drops the zero error code, and `.` prints the fallback value.
 
 If the inner `catch` had seen a different error code, it would have rethrown it, and the outer `catch` would have intercepted it instead.
 
@@ -179,8 +185,8 @@ Use `throw` for situations where a word cannot continue: bad input, a hardware t
 ```froth
 : in-range ( n lo hi -- n )
   rot dup rot rot
-  over < [ drop drop 100 throw ] when
-  over > [ drop 100 throw ] when ;
+  over < [ drop drop 100 throw ] [ ] if
+  over > [ drop 100 throw ] [ ] if ;
 ```
 
 Use `catch` for operations that might legitimately fail and where the failure has a sensible recovery path: an I/O read that might time out, a computation that might divide by zero, a word that might receive malformed input.

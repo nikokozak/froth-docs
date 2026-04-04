@@ -189,7 +189,7 @@ The `autorun` hook bridges the gap between development session and deployed devi
 ```froth
 : autorun ( -- )
   LED_BUILTIN 1 gpio.mode
-  [ true ] [ 500 blink ] while ;
+  [ -1 ] [ 500 blink ] while ;
 save
 ```
 

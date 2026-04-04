@@ -182,12 +182,12 @@ For a continuously blinking LED, use `while` with an always-true condition:
 
 ```froth
 froth> : blink-loop ( delay -- )
-...     [ true ] [ dup blink ] while
+...     [ -1 ] [ dup blink ] while
 ...     drop ;
 froth> 500 blink-loop
 ```
 
-The `[ true ]` condition never becomes false, so the loop runs until you interrupt it. Press the reset button on the board or power-cycle to stop it.
+The `[ -1 ]` condition never becomes false, so the loop runs until you interrupt it. Press the reset button on the board or power-cycle to stop it.
 
 `blink-loop` does not return. It's meant for deployment, not interactive use. In the next section we'll turn it into an `autorun`.
 
@@ -206,7 +206,7 @@ To make the LED start blinking automatically at boot, define `autorun`:
 ```froth
 froth> : autorun ( -- )
 ...     LED_BUILTIN 1 gpio.mode
-...     [ true ] [ 500 blink ] while ;
+...     [ -1 ] [ 500 blink ] while ;
 froth> save
 ```
 
@@ -228,7 +228,7 @@ froth> : sos ( -- )
 ...     300 ms
 ...     3 100 blink-n   \ three short
 ...     1000 ms ;
-froth> [ true ] [ sos ] while
+froth> [ -1 ] [ sos ] while
 ```
 
 ### Speed control via the BOOT button
@@ -246,8 +246,8 @@ froth> : toggle-speed ( -- )
 froth> : button-blink ( -- )
 ...     BOOT_BUTTON 0 gpio.mode
 ...     LED_BUILTIN 1 gpio.mode
-...     [ true ] [
-...       BOOT_BUTTON gpio.read 0 = [ toggle-speed ] when
+...     [ -1 ] [
+...       BOOT_BUTTON gpio.read 0 = [ toggle-speed ] [ ] if
 ...       current-delay @ blink
 ...     ] while ;
 ```

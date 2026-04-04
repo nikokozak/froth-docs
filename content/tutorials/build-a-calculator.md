@@ -112,15 +112,14 @@ Division by zero throws an error. Wrap division in a word that catches it and pr
 ```froth
 froth> : safe/mod ( a b -- remainder quotient )
 ...     [ /mod ] catch
-...     dup 0 =
 ...     [ drop ]
 ...     [ drop drop drop "Error: division by zero" s.emit cr ]
 ...     if ;
 ```
 
-`catch ( q -- ... 0 | e )` runs the quotation. If it succeeds, it pushes `0` as the error code. If it throws, it restores the stack to the state before the quotation ran and pushes the error code.
+`catch ( q -- ... ecode flag )` runs the quotation. If it succeeds, it preserves the quotation's results and adds `0 -1` on top. If it throws, it restores the stack to the state before the quotation ran and adds `ecode 0`.
 
-In the success case, `dup 0 =` is true, we `drop` the zero and the result of `/mod` is already on the stack. In the error case, the stack has been restored to `[a b]` with the error code on top, so we drop all three and print the message.
+In the success case, `if` sees the `-1` flag and the success branch drops the zero error code, leaving `/mod`'s result untouched. In the error case, `catch` has restored the stack to `[a b]` and added the error code, so the failure branch drops all three values and prints the message.
 
 ```froth
 froth> 10 2 safe/mod .s
@@ -138,13 +137,23 @@ Compose everything into a dispatch word. `calculate` takes a number and an opera
 
 ```froth
 froth> : calculate ( n s -- result )
-...     dup "square"   s.= [ drop square    ] when
-...     dup "cube"     s.= [ drop cube      ] when
-...     dup "fact"     s.= [ drop factorial ] when
-...     drop ;
+...     dup "square" s.=
+...     [ drop square ]
+...     [
+...       dup "cube" s.=
+...       [ drop cube ]
+...       [
+...         dup "fact" s.=
+...         [ drop factorial ]
+...         [ drop ]
+...         if
+...       ]
+...       if
+...     ]
+...     if ;
 ```
 
-Each line `dup`s the operation string before comparing it with `s.=` (which consumes both strings). If the comparison matches, the `when` branch `drop`s the remaining string copy and calls the math word. If nothing matches, the final `drop` discards the unrecognized string, leaving `n` unchanged on the stack.
+Each comparison either dispatches immediately or falls through into the next false branch. The final `[ drop ]` handles unknown operation names by discarding the string and leaving `n` unchanged on the stack.
 
 ```froth
 froth> 5 "square" calculate .
@@ -175,16 +184,25 @@ froth> 5 "fact" calculate .
 
 : safe/mod ( a b -- remainder quotient )
   [ /mod ] catch
-  dup 0 =
   [ drop ]
   [ drop drop drop "Error: division by zero" s.emit cr ]
   if ;
 
 : calculate ( n s -- result )
-  dup "square"   s.= [ drop square    ] when
-  dup "cube"     s.= [ drop cube      ] when
-  dup "fact"     s.= [ drop factorial ] when
-  drop ;
+  dup "square" s.=
+  [ drop square ]
+  [
+    dup "cube" s.=
+    [ drop cube ]
+    [
+      dup "fact" s.=
+      [ drop factorial ]
+      [ drop ]
+      if
+    ]
+    if
+  ]
+  if ;
 ```
 
 You built this one word at a time, testing at each step. Small pieces, verified as you go, composed into the final program.
@@ -200,6 +218,6 @@ You built this one word at a time, testing at each step. Small pieces, verified 
 
 - **Word composition:** `cube` calls `square`; change `square` and `cube` changes too. Coherent redefinition working in a real program.
 - **Loops with accumulator:** `factorial` maintains state on the stack across `while` iterations. The key pattern: plan your stack layout before writing the loop body, then trace through one iteration manually.
-- **Error handling in practice:** `catch` gives you the error code and a clean stack. Check the code, handle or rethrow, drop what you don't need.
-- **String dispatch:** `s.=` compares strings. The `dup ... when` pattern checks multiple strings without consuming the original.
+- **Error handling in practice:** `catch` gives you an error code plus a success flag and restores the stack on failure. Branch on the flag, then drop or rethrow the error code as needed.
+- **String dispatch:** `s.=` compares strings. Nested `if` branches let you walk through a small operation vocabulary without losing the original input too early.
 - **Interactive development:** you built and tested each piece before composing them. Every word you define is immediately available to test.

@@ -62,6 +62,8 @@ You should see the LED flicker. To make the blink visible, you need timing.
 
 ### Timing: `ms`
 
+Exact word documentation: [Timing Reference](/reference/hardware/timing/).
+
 `ms ( ms -- )` blocks for the specified number of milliseconds. `500 ms` pauses for half a second. Nothing else executes during the wait.
 
 ```froth
@@ -150,7 +152,7 @@ A monitoring loop that prints the state continuously:
 
 ```froth
 : watch-button ( -- )
-  [ 1 ] [ button-state 50 ms ] while ;
+  [ -1 ] [ button-state 50 ms ] while ;
 ```
 
 This runs until you interrupt execution (Ctrl+C on most setups, or the reset button on the board). The `50 ms` delay keeps the output manageable and provides basic debouncing.
@@ -163,7 +165,7 @@ A button-controlled LED: the LED mirrors the button state. Press the button, the
 : button-led ( -- )
   LED_BUILTIN 1 gpio.mode
   BOOT_BUTTON 0 gpio.mode
-  [ 1 ] [
+  [ -1 ] [
     BOOT_BUTTON gpio.read
     0 = 1 0 choose
     LED_BUILTIN swap gpio.write
@@ -191,7 +193,7 @@ An SOS pattern using the `blink` word from earlier:
   1000 ms ;
 ```
 
-Three short blinks, three long, three short, then a pause. Run `sos` and watch the LED. For continuous signaling: `[ sos ] [ ] while`.
+Three short blinks, three long, three short, then a pause. Run `sos` and watch the LED. For continuous signaling: `[ -1 ] [ sos ] while`.
 
 ## PWM with LEDC
 

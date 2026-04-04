@@ -67,7 +67,7 @@ If the value is stuck at 0 or 4095, check your wiring. 0 means the pin is near G
 Watch the value change as you turn the pot:
 
 ```froth
-froth> [ true ] [ 34 adc.read . cr 100 ms ] while
+froth> [ -1 ] [ 34 adc.read . cr 100 ms ] while
 ```
 
 - `34 adc.read` reads the ADC count from GPIO 34
@@ -127,7 +127,7 @@ froth> : show-reading ( -- )
 ...     read-sensor counts->mv
 ...     . "mv" s.emit cr ;
 
-froth> [ true ] [ show-reading 250 ms ] while
+froth> [ -1 ] [ show-reading 250 ms ] while
 ```
 
 Output looks like:
@@ -145,7 +145,7 @@ as you turn the potentiometer.
 
 ```froth
 froth> : sensor-loop ( -- )
-...     [ true ] [ show-reading 250 ms ] while ;
+...     [ -1 ] [ show-reading 250 ms ] while ;
 ```
 
 Call `sensor-loop` to start the display. It runs until interrupted.
@@ -172,7 +172,7 @@ Set up the LED and run:
 froth> LED_BUILTIN 1 gpio.mode
 
 froth> : sensor-loop-with-alert ( -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       read-sensor counts->mv
 ...       check-threshold
 ...       . "mv" s.emit cr
@@ -252,7 +252,7 @@ Power-cycle the board. The sensor loop starts immediately.
 \ Main loop
 : sensor-loop ( -- )
   setup
-  [ true ] [
+  [ -1 ] [
     read-sensor counts->mv
     check-threshold
     . "mv" s.emit cr
@@ -269,7 +269,7 @@ Each word does one thing. `sensor-loop` composes them. This is how Froth program
 
 - **`adc.read ( pin -- count )`** reads a 12-bit ADC value (0-4095). The ADC measures voltage on analog-capable pins.
 - **Integer calibration math:** `counts->mv` converts raw counts to millivolts using `*` and `/mod`. `nip` discards the remainder and keeps the quotient.
-- **Continuous loops with `while`:** `[ true ] [ body ] while` is the infinite monitoring loop pattern.
+- **Continuous loops with `while`:** `[ -1 ] [ body ] while` is the simplest infinite monitoring loop pattern.
 - **Named constants with `value` / `to`:** `34 'sensor-pin value` and `2000 'alert-threshold value` make the program configurable without touching word definitions.
 - **`dup` before branching:** when you need a value for both the test and the output, `dup` it before the comparison.
 - **Composing hardware words:** `check-threshold` combines a comparison with GPIO output, taking one value and returning the same value unchanged.

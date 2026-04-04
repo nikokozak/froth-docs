@@ -103,7 +103,7 @@ Combine fade-up and fade-down into a continuous loop:
 
 ```froth
 froth> : breathe ( step-ms -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       dup fade-up
 ...       dup fade-down
 ...     ] while
@@ -118,7 +118,7 @@ Redefine on the fly to add a pause at full brightness and at off:
 
 ```froth
 froth> : breathe ( step-ms -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       dup fade-up
 ...       500 ms
 ...       dup fade-down
@@ -142,7 +142,7 @@ froth> : read-pot ( -- duty )
 
 froth> : knob-brightness ( -- )
 ...     LED_BUILTIN 1 gpio.mode
-...     [ true ] [
+...     [ -1 ] [
 ...       read-pot set-brightness
 ...       20 ms
 ...     ] while ;

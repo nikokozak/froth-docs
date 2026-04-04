@@ -57,7 +57,7 @@ froth> 0 10 20 choose .
 20
 ```
 
-In Froth, `true` is -1 and `false` is 0. The comparison words `<`, `=`, and `>` return these values. `not` is a bitwise invert, which flips -1 to 0 and 0 to -1.
+In Froth, a true flag is `-1` and false is `0`. The comparison words `<`, `=`, and `>` return these values. When you want the opposite test, `0 =` is the usual way to invert a flag.
 
 `choose` works with any kind of value, not just numbers. It works with quotations too, and that is where it becomes interesting.
 
@@ -96,20 +96,16 @@ froth> 3 5 > [ 10 ] [ 20 ] if .
 
 Notice the argument order. All three arguments are on the stack before `if` runs: the flag, then the true branch, then the false branch. `if` is not special syntax. It is a word that consumes three values and produces one result.
 
-## `when`
+## True-only branches
 
-Sometimes you only need to act on the true case. `when` runs a quotation if the flag is true and does nothing if it is false.
-
-```
-when ( flag q -- )
-```
+Sometimes you only need to act on the true case. Use `if` with an empty false quotation:
 
 ```froth
-froth> 5 0 > [ 99 . ] when
+froth> 5 0 > [ 99 . ] [ ] if
 99
 ```
 
-If the flag had been 0, nothing would print and the quotation would be discarded.
+If the flag is 0, the empty quotation runs and nothing happens.
 
 ## `while`
 
@@ -244,7 +240,7 @@ This means a named word and an anonymous quotation are the same kind of thing fr
 
 **Exercise 1.** Given `3 [ dup * ] call`, trace the stack. What is the final result?
 
-**Exercise 2.** Write an `if` expression that takes a number from the stack, checks whether it is greater than zero, and leaves 1 if true or 0 if false.
+**Exercise 2.** Write an `if` expression that takes a number from the stack, checks whether it is greater than zero, and leaves `-1` if true or `0` if false.
 
 **Exercise 3.** What does this print? Trace it before running.
 

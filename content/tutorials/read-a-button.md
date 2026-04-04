@@ -65,7 +65,7 @@ froth> BOOT_BUTTON gpio.read .
 Watch the button state continuously:
 
 ```froth
-froth> [ true ] [ BOOT_BUTTON gpio.read . cr 200 ms ] while
+froth> [ -1 ] [ BOOT_BUTTON gpio.read . cr 200 ms ] while
 ```
 
 A stream of `1`s scrolls past. Press and hold the BOOT button and the `1`s become `0`s. Release and they go back to `1`s.
@@ -78,9 +78,9 @@ Printing every state is noisy. Print only when the button is actually pressed:
 
 ```froth
 froth> : watch-button ( -- )
-...     [ true ] [
+...     [ -1 ] [
 ...       BOOT_BUTTON gpio.read 0 =
-...       [ "pressed" s.emit cr ] when
+...       [ "pressed" s.emit cr ] [ ] if
 ...       50 ms
 ...     ] while ;
 froth> watch-button
@@ -88,7 +88,7 @@ froth> watch-button
 
 The REPL is silent until you press the button. Each press prints `pressed`.
 
-`when ( flag quot -- )` runs the quotation only if the flag is true. There's no else branch.
+`if ( flag trueQ falseQ -- )` works fine for one-armed conditionals too. Here the false branch is the empty quotation `[ ]`, so nothing happens unless the button is pressed.
 
 You'll notice that holding the button prints `pressed` repeatedly (roughly every 50ms). That's expected. We'll fix it in the debouncing section.
 
@@ -100,7 +100,7 @@ Light the LED while the button is held:
 froth> : button-led ( -- )
 ...     BOOT_BUTTON 0 gpio.mode
 ...     LED_BUILTIN 1 gpio.mode
-...     [ true ] [
+...     [ -1 ] [
 ...       BOOT_BUTTON gpio.read 0 =
 ...       [ LED_BUILTIN 1 gpio.write ]
 ...       [ LED_BUILTIN 0 gpio.write ]
@@ -131,9 +131,9 @@ froth> : flip-led ( -- )
 froth> : toggle-button ( -- )
 ...     BOOT_BUTTON 0 gpio.mode
 ...     LED_BUILTIN 1 gpio.mode
-...     [ true ] [
+...     [ -1 ] [
 ...       BOOT_BUTTON gpio.read 0 =
-...       [ flip-led ] when
+...       [ flip-led ] [ ] if
 ...       200 ms
 ...     ] while ;
 froth> toggle-button
@@ -167,8 +167,8 @@ froth> : toggle-debounced ( -- )
 ...     LED_BUILTIN 1 gpio.mode
 ...     1 prev-state !
 ...     0 led-state !
-...     [ true ] [
-...       button-fell? [ flip-led ] when
+...     [ -1 ] [
+...       button-fell? [ flip-led ] [ ] if
 ...       20 ms
 ...     ] while ;
 froth> toggle-debounced
@@ -194,7 +194,7 @@ Replace `BOOT_BUTTON` with `15` in any of the words above and they'll work with 
 
 - **`gpio.read ( pin -- level )`** reads a pin's digital state. Returns `1` (high) or `0` (low).
 - **Active-low buttons:** the BOOT button (and most pushbuttons with pull-ups) read `0` when pressed, `1` when released. Check with `0 =` to test for "pressed."
-- **Polling loops:** `[ true ] [ ... ms ] while` checks a condition at a fixed interval.
-- **`when` for conditional execution:** `flag [ action ] when` runs the action only if the flag is true.
+- **Polling loops:** `[ -1 ] [ ... ms ] while` is the simplest fixed-interval monitoring loop.
+- **True-only conditionals:** `flag [ action ] [ ] if` runs the action only when the flag is true.
 - **State with CellSpace:** `'led-state variable` creates one mutable cell. Read it with `@`, update it with `!`, or increment it with `+!`.
 - **Edge detection / debouncing:** compare the current reading to the previous reading to detect transitions. React on the falling edge, not on the steady state.
