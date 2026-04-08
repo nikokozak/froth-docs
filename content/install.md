@@ -4,13 +4,7 @@ aliases:
   - /guide/00-installation/
 ---
 
-Froth is still in development. Direct downloads and a simpler public install flow will be available soon.
-
-This page is not the public installation guide for Froth.
-
-It is a reference page for pre-alpha Froth developers: people working from the repository, testing the tooling early, or contributing to the language and board support.
-
-The instructions below document the pre-alpha fallback path: build the CLI from the repo, point the editor at it, and connect to hardware or the local POSIX target.
+Froth now has a public macOS install path through Homebrew.
 
 You need two things: the Froth CLI and the VSCode extension. If you have an ESP32 board, you can work directly on hardware. If you do not, the CLI also supports a local POSIX target that runs Froth on your computer. Either way, the goal is the same: get to a `froth>` prompt quickly.
 
@@ -35,11 +29,14 @@ The local target is not a simulator. It is a real Froth session running on your 
 
 ## Install the Froth CLI
 
-### Status
+### macOS: Homebrew
 
-Packaged downloads are not the main install path yet. They will be published once the tooling and distribution flow settle down.
+```sh
+brew tap nikokozak/froth
+brew install froth
+```
 
-Until then, this section exists only as a pre-alpha developer reference. End-user installation is not the intended path here.
+This installs `froth` onto your `PATH`.
 
 ### Fallback: build from the repo
 
@@ -58,21 +55,33 @@ You can either:
 - put that binary on your `PATH` as `froth`
 - keep it where it is and point the VSCode extension at it with `froth.cliPath`
 
-If you already have a packaged CLI binary from an internal or pre-release distribution flow, that works too. The important detail for this codebase is that the repo-local build artifact is `tools/cli/froth-cli`.
+The important detail for this codebase is that the repo-local build artifact is `tools/cli/froth-cli`.
 
 ## Verify the CLI
 
 ```sh
-./froth-cli
+froth --version
 ```
 
-If it prints usage information, the CLI built successfully.
+If it prints a version string, the CLI is installed correctly.
+
+If you are still using the repo-local binary directly, run:
+
+```sh
+tools/cli/froth-cli --version
+```
 
 ## Install the VSCode extension
 
-The extension is in the same stage as the CLI: a packaged download path is coming, but the repo-local path is the reliable fallback for pre-alpha developers.
+Open VSCode, go to Extensions, and install `froth.froth`.
 
-If you have a packaged Froth extension from an internal or pre-release flow, install that in VSCode. For repo-local development, the extension source lives under `tools/vscode/`.
+If you have a packaged `.vsix`, install it with:
+
+```sh
+code --install-extension froth-<version>.vsix
+```
+
+For repo-local development, the extension source lives under `tools/vscode/`.
 
 To verify the extension is active, create a file with a `.froth` extension. VSCode should recognize it as Froth and enable syntax highlighting.
 

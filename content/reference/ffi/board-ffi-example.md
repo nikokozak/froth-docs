@@ -21,9 +21,13 @@ The goal is to show the intended layering:
 
 The ESP32 board exposes a minimal UART primitive set in C:
 
+- `console.info ( -- )`
+- `console.default! ( -- )`
+- `console.uart! ( port tx rx baud -- )`
 - `uart.init ( tx rx baud -- uart )`
 - `uart.write ( byte uart -- )`
 - `uart.read ( uart -- byte )`
+- `uart.key? ( uart -- flag )`
 
 The board library then builds convenience words on top:
 
@@ -100,19 +104,22 @@ This does one board-owned job:
 
 The user no longer has to remember TX/RX pin numbers.
 
-The second wrapper is string-oriented output:
+The second wrapper is string-oriented output. The public docs version below stays on the documented surface:
 
 ```froth
-: _uart.type-step ( s uart i -- s uart )
-    >r
-    over r@ s@
-    over uart.write
-    r> drop
-;
+'uart.type-s variable
+'uart.type-uart variable
+'uart.type-i variable
 
 : uart.type ( s uart -- )
-    over s.len [ _uart.type-step ] times.i
-    drop drop
+    uart.type-uart !
+    uart.type-s !
+    0 uart.type-i !
+    [ uart.type-i @ uart.type-s @ s.len < ]
+    [ uart.type-s @ uart.type-i @ s@
+      uart.type-uart @ uart.write
+      1 uart.type-i +! ]
+    while
 ;
 ```
 
@@ -120,6 +127,7 @@ This is the intended pattern:
 
 - C provides the smallest useful primitive: one byte in, one byte out
 - Froth provides the sequence logic and string traversal
+- console rebinding stays a separate board-owned surface because it changes the REPL path itself
 
 ## Step 3: user-facing code
 
@@ -128,6 +136,7 @@ Once the board layer exists, user code can stay clean:
 ```froth
 115200 uart.setup 'u value
 "Hello" u uart.type
+u uart.key? .
 u uart.read .
 ```
 
@@ -135,6 +144,7 @@ The user sees:
 
 - one setup word
 - one string-output word
+- one readiness probe when they need RX polling
 - the raw byte read when needed
 
 That is a better API than forcing every project to rediscover board pins and hand-roll string emission.
@@ -155,6 +165,7 @@ It keeps each layer doing the right kind of work.
 - default pins
 - string iteration
 - convenience naming
+- separation between auxiliary UART helpers and REPL-routing words
 
 **Project/application layer**
 
@@ -173,6 +184,8 @@ When adding a board-owned surface:
 4. keep the convenience layer small and board-specific
 
 Do not push higher-level application policy into the board package.
+
+The deliberate exception is `console.uart!`: it belongs in the board layer because moving the active REPL transport is board-owned behavior, not project policy.
 
 ## A second board example in the same tree
 

@@ -209,12 +209,22 @@ The returned bus handle is just a Froth number. Later calls pass it back into ot
 
 The low-level UART surface is byte-oriented, but the board library builds a string helper on top.
 
-From `boards/esp32-devkit-v1/lib/board.froth`:
+The documented shape looks like this:
 
 ```froth
+'uart.type-s variable
+'uart.type-uart variable
+'uart.type-i variable
+
 : uart.type ( s uart -- )
-    over s.len [ _uart.type-step ] times.i
-    drop drop
+    uart.type-uart !
+    uart.type-s !
+    0 uart.type-i !
+    [ uart.type-i @ uart.type-s @ s.len < ]
+    [ uart.type-s @ uart.type-i @ s@
+      uart.type-uart @ uart.write
+      1 uart.type-i +! ]
+    while
 ;
 ```
 

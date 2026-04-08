@@ -413,14 +413,6 @@ Repeatedly calls `cond`; if it leaves a truthy flag, `while` calls `body` and re
 froth> 3 [ dup 0 > ] [ dup . 1 - ] while drop
 ```
 
-**`times.i`** *(C)*  `( n q -- )`
-
-Calls `q` exactly `n` times and pushes the zero-based loop index before each call. The callee must consume the index and leave the stack depth unchanged.
-
-```froth
-froth> 4 [ . ] times.i
-```
-
 ### Stdlib — Control Flow and Combinators
 
 **`if`** *(Froth)*  `( flag t f -- result )`

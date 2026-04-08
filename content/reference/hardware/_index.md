@@ -8,7 +8,7 @@ This section covers target-facing APIs.
 
 Use it for words that depend on board or platform support rather than the core VM or stdlib:
 
-- raw board or platform FFI words such as `gpio.mode`, `i2c.init`, `uart.read`, and `ms`
+- raw board or platform FFI words such as `gpio.mode`, `i2c.init`, `uart.read`, `uart.key?`, `console.uart!`, and `ms`
 - board-lib convenience words such as `i2c.setup`, `i2c.device`, `uart.setup`, and `uart.type`
 - availability notes for hardware targets and the local POSIX target
 

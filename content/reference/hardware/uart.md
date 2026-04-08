@@ -1,10 +1,13 @@
 ---
 title: "UART"
 weight: 3
-description: "Auxiliary UART words and board-lib convenience helpers."
+description: "Auxiliary UART words, console-routing affordances, and board-lib helpers."
 ---
 
-UART is exposed as a minimal byte-oriented surface plus two board-lib convenience words.
+UART now has two related surfaces:
+
+- auxiliary UART handles for ordinary serial I/O
+- console-routing words for boards that can move the active REPL/transport UART at runtime
 
 ## Availability
 
@@ -41,6 +44,14 @@ Reads one byte from a UART.
 uart uart.read .
 ```
 
+**`uart.key?`**  `( uart -- flag )`
+
+Pushes `-1` when at least one byte is waiting in the UART RX buffer, otherwise `0`.
+
+```froth
+uart uart.key?
+```
+
 ## Board-lib helpers
 
 **`uart.setup`**  `( baud -- uart )`
@@ -59,10 +70,64 @@ Writes every byte of a string to a UART.
 "hello" uart uart.type
 ```
 
+## Console routing words
+
+These words are for the active console path itself: the byte stream that carries REPL input, REPL output, and host attachment.
+
+On boards that support them, they are the explicit way to move the REPL away from the default boot UART and onto a different route.
+
+**`console.info`**  `( -- )`
+
+Prints the currently active console UART route.
+
+```froth
+console.info
+```
+
+Typical ESP32 output:
+
+```text
+console uart0 tx=1 rx=3 baud=115200
+```
+
+**`console.uart!`**  `( port tx rx baud -- )`
+
+Rebinds the active console, including subsequent REPL input, to the specified UART route.
+
+```froth
+1 17 16 1200 console.uart!
+```
+
+After that call succeeds, the REPL no longer listens on the old default UART. The next prompt, the next line of input, and the next host attachment all happen on the new route.
+
+This is intended for cases like a serial terminal or typewriter workflow where you want the Froth console itself to move, not just a side-channel UART handle.
+
+**`console.default!`**  `( -- )`
+
+Restores the default boot and recovery UART route.
+
+```froth
+console.default!
+```
+
+### Persistent redirect example
+
+If you want the board to come up on a different REPL UART after boot, define `autorun` and save a snapshot:
+
+```froth
+: typewriter-console ( -- )   1 17 16 1200 console.uart! ;
+: autorun ( -- )   typewriter-console ;
+save
+```
+
+Safe boot still comes up on the default console path first, so you keep a recovery route even if the saved redirect is wrong.
+
 ## Notes
 
-- This is a minimal byte-oriented API. There is no `uart.key?`, deinit word, or buffered line interface in this surface.
-- On ESP32 DevKit V1, this surface uses auxiliary UARTs and leaves the REPL/transport UART alone.
-- On POSIX, `uart.write` emits to the host console and `uart.read` returns deterministic stub bytes for tests and examples.
+- `uart.setup` and `uart.type` are still ordinary auxiliary-UART helpers. They do not move the REPL by themselves.
+- Use `console.uart!` when you intentionally want REPL input and output to move to a different UART.
+- On ESP32 DevKit V1, `console.*` is available and the implementation rejects routes that would conflict with an allocated auxiliary UART handle.
+- `console.uart!` and `console.default!` fail while a Live session is attached; use them in direct REPL mode or in `autorun`.
+- On POSIX, `uart.write` emits to the host console, `uart.read` returns deterministic stub bytes, and `console.*` is not part of the shared POSIX surface.
 
 For the board-level convenience layer, see `boards/<board>/lib/board.froth` in the Froth repo.
