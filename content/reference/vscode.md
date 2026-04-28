@@ -9,13 +9,9 @@ The Froth VSCode extension is a thin front end over the Froth CLI and daemon. It
 
 ## Installation
 
-The extension manifest identifies the extension as `froth.froth`.
-
-If you have a packaged `.vsix`, install it with:
-
-```sh
-code --install-extension froth-0.0.2.vsix
-```
+The extension is currently available only to pre-alpha testers, like the rest
+of Froth. Public extension install instructions are intentionally not posted
+yet; see [Install](/install/) for current availability.
 
 The extension activates on VSCode startup, not only when you open a `.froth` file.
 
