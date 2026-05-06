@@ -16,9 +16,13 @@
   <link rel="stylesheet" href="{{ "css/style.css" | relURL }}">
 </head>
 <body data-search-index="{{ "index.json" | relURL }}">
+  <div class="archive-banner">
+    This is the OldFroth archive. The current Froth language lives at
+    <a href="https://frothlang.org/">frothlang.org</a>.
+  </div>
   <header class="site-header">
     <nav>
-      <a href="{{ "/" | relURL }}" class="site-title">Froth</a>
+      <a href="{{ "/" | relURL }}" class="site-title">OldFroth</a>
       <div class="nav-links">
         <a href="{{ "install/" | relURL }}">Install</a>
         <a href="{{ "guide/" | relURL }}">Guide</a>
@@ -41,7 +45,7 @@
   </main>
 
   <footer class="site-footer">
-    <p>Froth — a programming language for microcontrollers</p>
+    <p>OldFroth — archive of the original Froth language</p>
   </footer>
 
   {{ partial "search.html" . }}

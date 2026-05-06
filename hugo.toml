@@ -1,6 +1,6 @@
-baseURL = "https://frothlang.org/"
+baseURL = "https://oldfroth.frothlang.org/"
 languageCode = "en-us"
-title = "Froth"
+title = "OldFroth"
 relativeURLs = true
 
 [outputs]
@@ -16,4 +16,4 @@ relativeURLs = true
     noClasses = false
 
 [params]
-  description = "A programming language that turns your microcontroller into a conversation."
+  description = "Archive of the original Froth language and documentation."
