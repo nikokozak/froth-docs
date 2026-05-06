@@ -1,8 +1,11 @@
 ---
-title: "Froth"
+title: "OldFroth"
 ---
 
-A programming language that turns your microcontroller into a conversation.
+OldFroth is the archived original Froth language and documentation.
+
+The current language now lives at [frothlang.org](https://frothlang.org/).
+This archive remains available for historical reference and substrate context.
 
 ```froth
 : blink  2 1 gpio.write 200 ms 2 0 gpio.write 200 ms ;
